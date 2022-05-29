@@ -1,0 +1,66 @@
+{
+  "name": "todo-list",
+  "private": true,
+  "version": "0.0.1",
+  "description": "This project builds a web page to show \"to-do list\"",
+  "scripts": {
+    "lint": "eslint",
+    "start": "webpack serve --hot",
+    "build": "webpack",
+    "build:prod": "NODE_ENV=production webpack",
+    "test": "echo 42",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zunsthy/todo-list.git"
+  },
+  "keywords": [
+    "todo-list",
+    "todo",
+    "beginner"
+  ],
+  "author": {
+    "name": "zunsthy",
+    "email": "zuns.thy@gmail.com"
+  },
+  "engines": {
+    "node": ">= 16",
+    "npm": ">= 8"
+  },
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/zunsthy/todo-list/issues"
+  },
+  "devDependencies": {
+    "@babel/core": "^7",
+    "@babel/preset-env": "^7",
+    "@babel/preset-react": "^7",
+    "babel-eslint": "^10",
+    "babel-loader": "^8",
+    "css-loader": "^6",
+    "eslint": "^8",
+    "eslint-config-prettier": "^8",
+    "eslint-config-standard": "^17",
+    "eslint-plugin-react": "^7",
+    "html-webpack-plugin": "^5",
+    "husky": "^8",
+    "lint-staged": "^12",
+    "mini-css-extract-plugin": "^2",
+    "prettier": "^2",
+    "source-map-loader": "^3.0.1",
+    "style-loader": "^3",
+    "stylelint-config-prettier": "^9",
+    "webpack": "^5",
+    "webpack-cli": "^4",
+    "webpack-dev-server": "^4",
+    "webpack-manifest-plugin": "^5"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "lint-staged": {
+    "*.{js,jsx,css}": "prettier --write"
+  }
+}
