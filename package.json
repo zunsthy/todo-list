@@ -1,5 +1,6 @@
 {
   "name": "todo-list",
+  "type": "module",
   "private": true,
   "version": "0.0.1",
   "description": "This project builds a web page to show \"to-do list\"",
@@ -34,9 +35,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7",
+    "@babel/eslint-parser": "^7",
     "@babel/preset-env": "^7",
     "@babel/preset-react": "^7",
-    "babel-eslint": "^10",
     "babel-loader": "^8",
     "css-loader": "^6",
     "eslint": "^8",
@@ -48,7 +49,7 @@
     "lint-staged": "^12",
     "mini-css-extract-plugin": "^2",
     "prettier": "^2",
-    "source-map-loader": "^3.0.1",
+    "source-map-loader": "^3",
     "style-loader": "^3",
     "stylelint-config-prettier": "^9",
     "webpack": "^5",
