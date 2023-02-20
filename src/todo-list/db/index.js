@@ -10,7 +10,7 @@ const createStore = (db) => {
     keyPath: "id",
     autoIncrement: true,
   });
-  store.createIndex("name", "name", { unique: true });
+  store.createIndex("name", "name", { unique: false });
 
   store = db.createObjectStore("category", {
     keyPath: "id",
@@ -22,7 +22,7 @@ const createStore = (db) => {
     keyPath: "id",
     autoIncrement: true,
   });
-  store.createIndex("name", "name", { unique: false });
+  store.createIndex("name", "name", { unique: true });
 };
 
 export const open = (cb) => {
@@ -77,5 +77,23 @@ export const loadAll = (cb) => {
       const records = ev.target.result;
       result[storeName] = records;
     });
+  });
+};
+
+export const add = (storeName, dataList, cb) => {
+  const ts = db.transaction([storeName], "readwrite");
+  ts.addEventListener("error", (ev) => {
+    const err = ev.target.error;
+    log("add data error", err);
+    cb(err);
+  });
+  ts.addEventListener("complete", () => {
+    log("add data success", dataList);
+    cb();
+  });
+  const store = ts.objectStore(storeName);
+  dataList.forEach((data) => {
+    const request = store.add(data);
+    request.addEventListener("success", () => {});
   });
 };

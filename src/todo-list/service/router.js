@@ -19,4 +19,10 @@ router.set("all", (id) => {
   });
 });
 
+router.set("add", (id, { storeName, dataList }) => {
+  db.add(storeName, dataList, (err, data) => {
+    self.postMessage([id, err, data]);
+  });
+});
+
 export default router;

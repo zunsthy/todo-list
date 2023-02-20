@@ -18,8 +18,8 @@ export const ServiceWrapper = ({ children }) => {
     const table = tableRef.current;
     if (table?.has(id)) {
       const cb = table.get(id);
-      table.delete(id);
       cb(err, data);
+      table.delete(id);
     }
   };
 
