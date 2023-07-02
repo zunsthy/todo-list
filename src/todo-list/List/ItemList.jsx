@@ -1,56 +1,54 @@
-import React, { useContext } from "react";
-import { ServiceContext } from "../service/index.js";
-import { CategoryList } from "./CategoryList.jsx";
+import React from "react";
+import { ACGNCategoryForm } from "./ACGNCategoryForm.jsx";
+import { ACGNContent } from "./ACGNContent.jsx";
+import { ACGNDetailForm } from "./ACGNDetailForm.jsx";
+import { ItemForm } from "./ItemForm.jsx";
 
-export const ItemList = ({ list, update }) => {
-  const invoke = useContext(ServiceContext);
-
-  const handleAdd = (ev) => {
-    ev.preventDefault();
-
-    const form = ev.currentTarget;
-    const name = form.elements.item("name").value.trim();
-    const entry = { name };
-    invoke("add", { storeName: "item", dataList: [entry] }, (err) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      update(list.concat({ ...entry, list: [] }));
-    });
+export const ItemList = ({ header, list }) => {
+  const renderContent = (item) => {
+    if (item.type === "acgn") {
+      return <h3>{item.name}</h3>;
+    }
+    if (item.type === "acgn_category") {
+      return <ACGNContent item={item} />;
+    }
+    return <span data-type={item.type}>{item.name}</span>;
   };
 
-  const handleUpdate = (categoryList, index) => {
-    const prev = list.slice(0, index);
-    const next = list.slice(index + 1);
-    const item = { ...list[index], list: categoryList };
-    update(prev.concat(item, next));
+  const renderChildren = (item) => {
+    if (item.type === "acgn") {
+      return (
+        <ItemList
+          list={item.children}
+          header={<ACGNCategoryForm pid={item.id} />}
+        />
+      );
+    }
+    if (item.type === "acgn_category") {
+      return (
+        <ItemList
+          list={item.children}
+          header={<ACGNDetailForm pid={item.id} />}
+        />
+      );
+    }
+    if (item.type === "acgn_detail") {
+      return null;
+    }
+    return (
+      <ItemList list={item.children} header={<ItemForm pid={item.id} />} />
+    );
   };
 
   return (
     <section className="list">
-      <header>
-        <form name="itemForm" onSubmit={handleAdd}>
-          <h6>+Item</h6>
-          <label>
-            <span>Name</span>
-            <input name="name" type="text" required />
-          </label>
-          <input type="submit" value="Add" />
-        </form>
-      </header>
+      <header>{header}</header>
 
       <main>
-        {list.map((item, index) => (
-          <div key={item.name}>
-            <h2>{item.name}</h2>
-            <CategoryList
-              item={item.name}
-              list={item.list}
-              update={(list) => {
-                handleUpdate(list, index);
-              }}
-            />
+        {list?.map((item) => (
+          <div key={item.id} data-type={item.type}>
+            {renderContent(item)}
+            {renderChildren(item)}
           </div>
         ))}
       </main>

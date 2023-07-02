@@ -1,28 +1,16 @@
 const log = console.log.bind(console, "%c[IDB]", "color: aqua");
 
-const version = 1;
+const version = 2;
 
 let db;
 
 const createStore = (db) => {
   let store;
-  store = db.createObjectStore("series", {
+  store = db.createObjectStore("items", {
     keyPath: "id",
     autoIncrement: true,
   });
-  store.createIndex("name", "name", { unique: false });
-
-  store = db.createObjectStore("category", {
-    keyPath: "id",
-    autoIncrement: true,
-  });
-  store.createIndex("name", "name", { unique: false });
-
-  store = db.createObjectStore("item", {
-    keyPath: "id",
-    autoIncrement: true,
-  });
-  store.createIndex("name", "name", { unique: true });
+  store.createIndex("id", "id", { unique: true });
 };
 
 export const open = (cb) => {
@@ -59,7 +47,7 @@ export const close = () => {
 };
 
 export const loadAll = (cb) => {
-  const storeNames = ["series", "category", "item"];
+  const storeNames = ["items"];
   const result = {};
   const ts = db.transaction(storeNames, "readonly");
   ts.addEventListener("error", (ev) => {
@@ -94,6 +82,24 @@ export const add = (storeName, dataList, cb) => {
   const store = ts.objectStore(storeName);
   dataList.forEach((data) => {
     const request = store.add(data);
+    request.addEventListener("success", () => {});
+  });
+};
+
+export const update = (storeName, dataList, cb) => {
+  const ts = db.transaction([storeName], "readwrite");
+  ts.addEventListener("error", (ev) => {
+    const err = ev.target.error;
+    log("add data error", err);
+    cb(err);
+  });
+  ts.addEventListener("complete", () => {
+    log("add data success", dataList);
+    cb();
+  });
+  const store = ts.objectStore(storeName);
+  dataList.forEach((data) => {
+    const request = store.put(data);
     request.addEventListener("success", () => {});
   });
 };
