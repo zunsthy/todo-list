@@ -5,12 +5,15 @@
   "version": "0.0.1",
   "description": "This project builds a web page to show \"to-do list\"",
   "scripts": {
-    "lint": "eslint",
-    "start": "webpack serve --hot",
-    "build": "webpack",
-    "build:prod": "NODE_ENV=production webpack",
-    "test": "echo 42",
-    "prepare": "husky install"
+    "dev": "rm -rf .dev && tsc -p tsconfig.dev.json && concurrently --no-color --kill-others-on-fail --names tsc,server \"tsc -p tsconfig.dev.json --watch --preserveWatchOutput\" \"node scripts/dev.ts\"",
+    "start": "npm run dev",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run typecheck",
+    "test": "node --test src/todo-list/List/tree.test.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test && npm run build"
   },
   "repository": {
     "type": "git",
@@ -22,46 +25,29 @@
     "beginner"
   ],
   "author": {
-    "name": "zunsthy",
-    "email": "zuns.thy@gmail.com"
+    "name": "z",
+    "url": "https://github.com/zunsthy"
   },
   "engines": {
-    "node": ">= 16",
-    "npm": ">= 8"
+    "node": ">= 22",
+    "npm": ">= 10"
   },
   "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/zunsthy/todo-list/issues"
   },
   "devDependencies": {
-    "@babel/core": "^7",
-    "@babel/eslint-parser": "^7",
-    "@babel/preset-env": "^7",
-    "@babel/preset-react": "^7",
-    "babel-loader": "^8",
-    "css-loader": "^6",
-    "eslint": "^8",
-    "eslint-config-prettier": "^8",
-    "eslint-config-standard": "^17",
-    "eslint-plugin-react": "^7",
-    "html-webpack-plugin": "^5",
-    "husky": "^8",
-    "lint-staged": "^12",
-    "mini-css-extract-plugin": "^2",
-    "prettier": "^2",
-    "source-map-loader": "^3",
-    "style-loader": "^3",
-    "stylelint-config-prettier": "^9",
-    "webpack": "^5",
-    "webpack-cli": "^4",
-    "webpack-dev-server": "^4",
-    "webpack-manifest-plugin": "^5"
+    "@types/mustache": "^4",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^10",
+    "mustache": "^4",
+    "prettier": "^3",
+    "typescript": "^7"
   },
   "dependencies": {
-    "react": "^18",
-    "react-dom": "^18"
-  },
-  "lint-staged": {
-    "*.{js,jsx,css}": "prettier --write"
+    "react": "^19",
+    "react-dom": "^19"
   }
 }
