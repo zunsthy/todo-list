@@ -1,0 +1,212 @@
+.catalog-editor {
+  width: min(64rem, calc(100% - 1rem));
+  max-height: calc(100vh - 1rem);
+  padding: 0.5rem;
+  overflow: auto;
+  color: #222;
+  background: #fff;
+  border: 1px solid #777;
+}
+
+.catalog-editor::backdrop {
+  background: rgb(0 0 0 / 25%);
+}
+
+.editor-trigger {
+  position: fixed;
+  z-index: 50;
+  top: 0.5rem;
+  right: 0.5rem;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.editor-trigger:active {
+  cursor: grabbing;
+}
+
+.editor-heading {
+  position: sticky;
+  z-index: 5;
+  top: -0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -0.5rem -0.5rem 0.3rem;
+  padding: 0.3rem 0.5rem;
+  background: #fff;
+  border-bottom: 1px solid #aaa;
+}
+
+.editor-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.editor-heading button {
+  min-width: 2rem;
+  padding: 0;
+  font-size: 1.2rem;
+}
+
+.data-transfer,
+.editor-create {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #aaa;
+}
+
+.data-transfer > summary,
+.editor-create > summary,
+.editor-children > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.data-transfer-content {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.data-transfer-content h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+}
+
+.data-transfer-content form h3 {
+  grid-column: 1 / -1;
+}
+
+.data-transfer-content form,
+.data-transfer-content label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.data-transfer-content form {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.data-transfer-content input,
+.data-transfer-content select {
+  min-width: 0;
+  padding: 0.3rem;
+  background: #fff;
+  border: 1px solid #aaa;
+}
+
+.data-transfer-content small,
+.data-transfer-content p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #666;
+}
+
+.data-transfer-content p[data-error="true"] {
+  color: #8a1f1f;
+}
+
+.editor-work-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.editor-work {
+  padding: 0.3rem 0 0.3rem 0.5rem;
+  border-left: 2px solid #777;
+}
+
+.editor-record-heading {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.editor-record-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.editor-record-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.editor-record-actions button {
+  min-height: 1.6rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.delete-action {
+  color: #8a1f1f;
+  border-color: #8a1f1f;
+}
+
+.editor-children {
+  margin: 0.3rem 0 0;
+  padding-left: 0.4rem;
+  border-left: 1px solid #ddd;
+}
+
+.editor-publication {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.editor-publication[data-undated="true"],
+.editor-episode-list li[data-undated="true"] {
+  background: #fff3b0;
+}
+
+.editor-episode-list {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.editor-episode-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.editor-episode-content {
+  display: flex;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.editor-episode-content strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-episode-content time {
+  margin-left: auto;
+  color: #666;
+}
+
+.editor-episode-content[data-completed="true"] {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.editor-episode-list .episode-form {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 40rem) {
+  .data-transfer-content form {
+    grid-template-columns: 1fr;
+  }
+}

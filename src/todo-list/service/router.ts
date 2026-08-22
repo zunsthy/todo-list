@@ -27,30 +27,42 @@ export const route = (request: ServiceRequest, respond: Respond): void => {
       return;
 
     case "add":
-      database.add(
-        request.params.storeName,
-        request.params.dataList,
-        (error) => {
-          if (error) {
-            respondWithError(respond, request.id, error);
-            return;
-          }
-          respond({ type: "response", id: request.id });
-        },
-      );
+      database.add(request.params, (error) => {
+        if (error) {
+          respondWithError(respond, request.id, error);
+          return;
+        }
+        respond({ type: "response", id: request.id });
+      });
       return;
 
     case "update":
-      database.update(
-        request.params.storeName,
-        request.params.dataList,
-        (error) => {
-          if (error) {
-            respondWithError(respond, request.id, error);
-            return;
-          }
-          respond({ type: "response", id: request.id });
-        },
-      );
+      database.update(request.params, (error) => {
+        if (error) {
+          respondWithError(respond, request.id, error);
+          return;
+        }
+        respond({ type: "response", id: request.id });
+      });
+      return;
+
+    case "delete":
+      database.remove(request.params, (error) => {
+        if (error) {
+          respondWithError(respond, request.id, error);
+          return;
+        }
+        respond({ type: "response", id: request.id });
+      });
+      return;
+
+    case "import":
+      database.importData(request.params, (error) => {
+        if (error) {
+          respondWithError(respond, request.id, error);
+          return;
+        }
+        respond({ type: "response", id: request.id });
+      });
   }
 };

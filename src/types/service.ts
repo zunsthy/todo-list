@@ -1,20 +1,17 @@
-import type { StoredTodoItem } from "./todo-list.js";
-
-export type StoreName = "items";
-
-export interface StoreSnapshot {
-  items: StoredTodoItem[];
-}
-
-export interface MutationParams {
-  storeName: StoreName;
-  dataList: StoredTodoItem[];
-}
+import type {
+  CatalogImportData,
+  CatalogMutation,
+  CatalogRecordMutation,
+  CatalogRecordTarget,
+  CatalogSnapshot,
+} from "./catalog.js";
 
 interface ServiceContract {
-  all: { params: Record<string, never>; result: StoreSnapshot };
-  add: { params: MutationParams; result: void };
-  update: { params: MutationParams; result: void };
+  all: { params: Record<string, never>; result: CatalogSnapshot };
+  add: { params: CatalogRecordMutation; result: void };
+  update: { params: CatalogMutation; result: void };
+  delete: { params: CatalogRecordTarget; result: void };
+  import: { params: CatalogImportData; result: void };
 }
 
 export type ServiceApi = keyof ServiceContract;

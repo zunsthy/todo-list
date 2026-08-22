@@ -1,0 +1,238 @@
+.empty-state {
+  margin: 0;
+  padding: 2rem;
+  color: #666;
+  text-align: center;
+}
+
+.timeline-grid {
+  width: max-content;
+  min-width: 100%;
+  background: #fff;
+  border-top: 1px solid #aaa;
+  border-left: 1px solid #aaa;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns:
+    var(--cover-width)
+    repeat(var(--quarter-count), var(--quarter-width));
+}
+
+.timeline-axis {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  min-height: 1.8rem;
+  background: #fff;
+  border-bottom: 1px solid #aaa;
+}
+
+.timeline-corner {
+  position: sticky;
+  z-index: 21;
+  left: 0;
+  grid-column: 1;
+  width: var(--cover-width);
+  background: #fff;
+  border-right: 1px solid #aaa;
+}
+
+.timeline-years,
+.timeline-lane {
+  display: grid;
+  grid-template-columns: repeat(var(--quarter-count), var(--quarter-width));
+}
+
+.timeline-years,
+.work-tracks {
+  grid-column: 2 / -1;
+}
+
+.timeline-year {
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #aaa;
+  font-size: 0.8rem;
+}
+
+.timeline-work {
+  border-bottom: 1px solid #aaa;
+}
+
+.work-cover {
+  position: sticky;
+  z-index: 12;
+  left: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  align-content: start;
+  min-height: 6rem;
+  margin: 0;
+  padding: 0.35rem;
+  background: #fff;
+  border-right: 1px solid #aaa;
+  cursor: pointer;
+  user-select: none;
+}
+
+.work-cover img,
+.cover-placeholder {
+  width: 99%;
+  aspect-ratio: 2 / 3;
+}
+
+.work-cover img {
+  object-fit: cover;
+  background: #eee;
+}
+
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  padding: 0.25rem;
+  border: 1px solid #aaa;
+  text-align: center;
+}
+
+.work-cover figcaption {
+  display: grid;
+  gap: 0.15rem;
+  align-content: start;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.work-cover figcaption > strong {
+  overflow-wrap: anywhere;
+}
+
+.work-cover figcaption > small {
+  color: #666;
+}
+
+.work-cover[data-completed="true"] {
+  opacity: 0.45;
+}
+
+.work-tracks {
+  background-image:
+    radial-gradient(circle at right 2px, #ddd 0 1px, transparent 1.2px),
+    radial-gradient(circle at right 2px, #aaa 0 1px, transparent 1.2px);
+  background-size:
+    var(--quarter-width) 5px,
+    var(--year-width) 5px;
+}
+
+.timeline-track {
+  min-height: 2rem;
+  padding: 0.08rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.track-label {
+  position: sticky;
+  z-index: 8;
+  left: calc(var(--cover-width) + 0.25rem);
+  width: max-content;
+  height: 1rem;
+  margin: 0 0 -1rem 0.25rem;
+  padding: 0 0.2rem;
+  overflow: visible;
+  background: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1rem;
+  transform: translateY(0.15rem);
+}
+
+.timeline-group {
+  padding: 0;
+}
+
+.timeline-group + .timeline-group {
+  border-top: 1px dashed #ccc;
+}
+
+.group-label {
+  position: sticky;
+  z-index: 7;
+  left: calc(var(--cover-width) + 2.7rem);
+  width: max-content;
+  height: 1rem;
+  margin: 0 0 -1rem 2.7rem;
+  padding: 0 0.2rem;
+  overflow: visible;
+  color: #666;
+  background: #fff;
+  font-size: 0.65rem;
+  font-weight: 400;
+  line-height: 1rem;
+  transform: translateY(0.15rem);
+}
+
+.timeline-lane {
+  min-height: 2rem;
+  padding: 0.08rem 0;
+}
+
+.timeline-cell {
+  z-index: 2;
+  display: flex;
+  gap: 0.08rem;
+  min-width: 0;
+  margin: 0.08rem 0.1rem;
+  overflow: hidden;
+}
+
+.timeline-item {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.2rem 0.3rem;
+  overflow: hidden;
+  color: #fff;
+  background: var(--item-color);
+  cursor: pointer;
+  font-size: 0.72rem;
+  user-select: none;
+}
+
+.timeline-item[data-completed="true"] {
+  opacity: 0.4;
+}
+
+.timeline-item-heading,
+.timeline-item-heading strong,
+.timeline-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-dated-publication {
+  position: sticky;
+  left: calc(var(--cover-width) + 0.5rem);
+  width: max-content;
+  margin: 0.5rem;
+  color: #777;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --cover-width: 5.635rem;
+    --quarter-width: 10rem;
+    --year-width: 40rem;
+  }
+
+  .work-cover img,
+  .cover-placeholder {
+    width: 3rem;
+  }
+}

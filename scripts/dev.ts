@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   developmentDirectory,
   renderPage,
-  sourceStylePath,
+  sourceStylesDirectory,
 } from "./build-config.ts";
 import { resolveStaticFile } from "./safe-path.ts";
 
@@ -47,9 +47,17 @@ const sendAsset = async (
   pathname: string,
 ): Promise<void> => {
   const requestedPath = pathname.slice("/assets/".length);
-  const filePath =
-    requestedPath === "style.css"
-      ? sourceStylePath
+  const stylesPrefix = "styles/";
+  const isStyle =
+    requestedPath.startsWith(stylesPrefix) &&
+    path.extname(requestedPath) === ".css";
+  const filePath = isStyle
+    ? await resolveStaticFile(
+        sourceStylesDirectory,
+        requestedPath.slice(stylesPrefix.length),
+      )
+    : requestedPath.startsWith(stylesPrefix)
+      ? null
       : await resolveStaticFile(assetsDirectory, requestedPath);
 
   if (!filePath) {

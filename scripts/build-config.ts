@@ -6,7 +6,7 @@ import Mustache from "mustache";
 export const projectDirectory = fileURLToPath(new URL("../", import.meta.url));
 export const distributionDirectory = path.join(projectDirectory, "dist");
 export const developmentDirectory = path.join(projectDirectory, ".dev");
-export const sourceStylePath = path.join(projectDirectory, "src/style.css");
+export const sourceStylesDirectory = path.join(projectDirectory, "src/styles");
 
 const templatePath = path.join(projectDirectory, "src/index.mustache");
 
@@ -15,9 +15,9 @@ export const renderPage = async (development: boolean): Promise<string> => {
   const options = development ? "?dev&target=es2022" : "?target=es2022";
 
   return Mustache.render(template, {
-    title: "To-Do List",
+    title: "Todo-list",
     assets: {
-      stylesheet: "/assets/style.css",
+      stylesheet: "/assets/styles/index.css",
       script: "/assets/todo-list.js",
     },
     imports: {

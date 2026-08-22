@@ -1,0 +1,49 @@
+.catalog-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.4rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.catalog-form h3,
+.catalog-form h4,
+.catalog-form h5 {
+  grid-column: 1 / -1;
+  margin: 0.2rem 0;
+  font-size: 1rem;
+}
+
+.catalog-form label {
+  display: grid;
+  gap: 0.15rem;
+  color: #555;
+  font-size: 0.8rem;
+}
+
+.catalog-form input,
+.catalog-form select,
+.catalog-form textarea {
+  width: 100%;
+  padding: 0.3rem;
+  color: #222;
+  background: #fff;
+  border: 1px solid #aaa;
+}
+
+.form-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.wide-field {
+  grid-column: span 2;
+}
+
+@media (max-width: 40rem) {
+  .wide-field {
+    grid-column: auto;
+  }
+}

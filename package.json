@@ -3,14 +3,14 @@
   "type": "module",
   "private": true,
   "version": "0.0.1",
-  "description": "This project builds a web page to show \"to-do list\"",
+  "description": "A timeline for tracking completed works and releases",
   "scripts": {
     "dev": "rm -rf .dev && tsc -p tsconfig.dev.json && concurrently --no-color --kill-others-on-fail --names tsc,server \"tsc -p tsconfig.dev.json --watch --preserveWatchOutput\" \"node scripts/dev.ts\"",
     "start": "npm run dev",
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
-    "test": "node --test src/todo-list/List/tree.test.ts",
+    "test": "node --test src/todo-list/Catalog/model/catalog.test.ts src/todo-list/Catalog/model/timeline.test.ts src/todo-list/Catalog/model/transfer.test.ts src/todo-list/db/migrate.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build"

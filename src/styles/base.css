@@ -1,0 +1,43 @@
+:root {
+  --cover-width: 7.245rem;
+  --quarter-width: 11rem;
+  --year-width: 44rem;
+  color: #222;
+  font:
+    13px/1.4 system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #fff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  min-height: 2rem;
+  padding: 0.25rem 0.55rem;
+  color: #222;
+  background: #fff;
+  border: 1px solid #888;
+  cursor: pointer;
+}
+
+.page {
+  min-width: 100%;
+  padding: 0.25rem;
+}
