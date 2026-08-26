@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { CatalogSnapshot } from "../../../types/catalog.js";
-import { createCatalogExport, parseCatalogImport } from "./transfer.ts";
+import {
+  combineCatalogImports,
+  createCatalogExport,
+  parseCatalogImport,
+} from "./transfer.ts";
 
 const snapshot: CatalogSnapshot = {
   works: [
@@ -122,5 +126,54 @@ test("parseCatalogImport rejects backup IDs used by another entity store", () =>
   assert.throws(
     () => parseCatalogImport(document, "episodes", snapshot),
     /已用于 works/,
+  );
+});
+
+test("combineCatalogImports lets later files replace the same store ID", () => {
+  const combined = combineCatalogImports([
+    {
+      works: [{ ...snapshot.works[0]!, title: "第一个文件" }],
+      completion: [{ id: "work-1", completed: false }],
+    },
+    {
+      works: [
+        { ...snapshot.works[0]!, title: "第二个文件" },
+        {
+          id: "work-2",
+          title: "新增作品",
+          aliases: [],
+          authors: [],
+          otherInfo: "",
+        },
+      ],
+      completion: [{ id: "work-1", completed: true }],
+    },
+  ]);
+
+  assert.deepEqual(
+    combined.works?.map(({ id, title }) => [id, title]),
+    [
+      ["work-1", "第二个文件"],
+      ["work-2", "新增作品"],
+    ],
+  );
+  assert.deepEqual(combined.completion, [{ id: "work-1", completed: true }]);
+});
+
+test("combineCatalogImports rejects cross-file entity ID collisions", () => {
+  assert.throws(
+    () =>
+      combineCatalogImports([
+        { works: [snapshot.works[0]!] },
+        {
+          episodes: [
+            {
+              ...snapshot.episodes[0]!,
+              id: "work-1",
+            },
+          ],
+        },
+      ]),
+    /同时出现在 works 和 episodes/,
   );
 });

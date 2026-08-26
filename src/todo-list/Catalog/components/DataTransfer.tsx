@@ -1,10 +1,15 @@
 import { useState, type FormEvent } from "react";
 import type {
+  CatalogImportData,
   CatalogImportScope,
   DataTransferProps,
 } from "../../../types/catalog.js";
 import { useCatalogActions } from "../context.js";
-import { createCatalogExport, parseCatalogImport } from "../model/transfer.js";
+import {
+  combineCatalogImports,
+  createCatalogExport,
+  parseCatalogImport,
+} from "../model/transfer.js";
 
 const downloadCatalog = (
   snapshot: DataTransferProps["snapshot"],
@@ -38,26 +43,37 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
     const form = event.currentTarget;
     const input = form.elements.namedItem("file");
     if (!(input instanceof HTMLInputElement) || !input.files?.[0]) return;
-    const file = input.files[0];
+    const files = [...input.files];
+    setFailed(false);
+    setMessage(`正在检查 ${files.length} 个文件…`);
 
     void (async () => {
       try {
-        const value: unknown = JSON.parse(await file.text());
-        const data = parseCatalogImport(
-          value,
-          scope,
-          snapshot,
-          parentId || undefined,
-        );
+        const imports: CatalogImportData[] = [];
+        for (const file of files) {
+          try {
+            const value: unknown = JSON.parse(await file.text());
+            imports.push(
+              parseCatalogImport(value, scope, snapshot, parentId || undefined),
+            );
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            throw new Error(`${file.name}：${message}`);
+          }
+        }
+        const data = combineCatalogImports(imports, snapshot);
         const count = Object.values(data).reduce(
           (total, records) => total + (records?.length ?? 0),
           0,
         );
+        if (count === 0) throw new Error("所选文件中没有可导入的数据。");
         if (
           !window.confirm(
-            `将导入 ${count} 条数据。应用备份会按 UUID 合并，外部数据会生成新 UUID 后追加。继续吗？`,
+            `将从 ${files.length} 个文件导入 ${count} 条数据。应用备份会按 UUID 合并，外部数据会生成新 UUID 后追加。继续吗？`,
           )
         ) {
+          setMessage("已取消导入。");
           return;
         }
 
@@ -65,7 +81,7 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
         setMessage("正在导入…");
         await importData(data);
         input.value = "";
-        setMessage(`已导入 ${count} 条数据。`);
+        setMessage(`已从 ${files.length} 个文件导入 ${count} 条数据。`);
       } catch (error: unknown) {
         setFailed(true);
         setMessage(error instanceof Error ? error.message : String(error));
@@ -149,9 +165,10 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
                 </label>
               )}
               <label>
-                <span>JSON 文件</span>
+                <span>JSON 文件（可多选）</span>
                 <input
                   accept="application/json,.json"
+                  multiple
                   name="file"
                   required
                   type="file"

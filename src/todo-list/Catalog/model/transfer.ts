@@ -430,6 +430,46 @@ const assertEntityIdsDoNotCollide = (
   }
 };
 
+const combineRecords = <Record extends { id: string }>(
+  lists: readonly (readonly Record[] | undefined)[],
+): Record[] => {
+  const records = new Map<string, Record>();
+  for (const list of lists) {
+    for (const record of list ?? []) records.set(record.id, record);
+  }
+  return [...records.values()];
+};
+
+export const combineCatalogImports = (
+  imports: readonly CatalogImportData[],
+  snapshot?: CatalogSnapshot,
+): CatalogImportData => {
+  const data: CatalogImportData = {
+    ...(imports.some(({ works }) => works !== undefined)
+      ? { works: combineRecords(imports.map(({ works }) => works)) }
+      : {}),
+    ...(imports.some(({ publications }) => publications !== undefined)
+      ? {
+          publications: combineRecords(
+            imports.map(({ publications }) => publications),
+          ),
+        }
+      : {}),
+    ...(imports.some(({ episodes }) => episodes !== undefined)
+      ? { episodes: combineRecords(imports.map(({ episodes }) => episodes)) }
+      : {}),
+    ...(imports.some(({ completion }) => completion !== undefined)
+      ? {
+          completion: combineRecords(
+            imports.map(({ completion }) => completion),
+          ),
+        }
+      : {}),
+  };
+  assertEntityIdsDoNotCollide(data, snapshot);
+  return data;
+};
+
 export const createCatalogExport = (
   snapshot: CatalogSnapshot,
   includeCompletion: boolean,
