@@ -9,8 +9,7 @@ import { EpisodeForm } from "../forms/EpisodeForm.js";
 import { PublicationForm } from "../forms/PublicationForm.js";
 import { WorkForm } from "../forms/WorkForm.js";
 import { buildTimeline } from "../model/timeline.js";
-import { selectCatalogWork } from "../model/transfer.js";
-import { downloadCatalog } from "../utils/download.js";
+import { downloadCatalogWork } from "../utils/download.js";
 import { DataTransfer } from "./DataTransfer.js";
 import { EditorTrigger } from "./EditorTrigger.js";
 
@@ -125,9 +124,9 @@ export const Editor = ({
                   <button
                     type="button"
                     onClick={() =>
-                      downloadCatalog(
-                        selectCatalogWork(snapshot, work.id),
-                        true,
+                      downloadCatalogWork(
+                        snapshot,
+                        work.id,
                         `todo-list-${work.title}`,
                       )
                     }

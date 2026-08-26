@@ -103,6 +103,27 @@ export interface CatalogTransferDocument {
   data: CatalogTransferData;
 }
 
+export interface CatalogWorkTransferPublication extends Publication {
+  episodes: Episode[];
+}
+
+export interface CatalogWorkTransferWork extends Work {
+  publications: CatalogWorkTransferPublication[];
+}
+
+export interface CatalogWorkTransferDocument {
+  format: "todo-list-catalog-work";
+  version: 1;
+  exportedAt: string;
+  data: {
+    work: CatalogWorkTransferWork;
+    completion: CompletionMapping[];
+  };
+}
+
+export type CatalogExportDocument =
+  CatalogTransferDocument | CatalogWorkTransferDocument;
+
 export type SaveCatalogRecord = (
   mutation: CatalogRecordMutation,
 ) => Promise<void>;

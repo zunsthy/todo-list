@@ -4,6 +4,7 @@ import type { CatalogSnapshot } from "../../../types/catalog.js";
 import {
   combineCatalogImports,
   createCatalogExport,
+  createCatalogWorkExport,
   parseCatalogImport,
   selectCatalogWork,
 } from "./transfer.ts";
@@ -50,6 +51,23 @@ test("createCatalogExport optionally includes completion", () => {
   assert.equal(complete.exportedAt, "2026-08-22T00:00:00.000Z");
   assert.deepEqual(complete.data.completion, snapshot.completion);
   assert.equal("completion" in withoutCompletion.data, false);
+});
+
+test("createCatalogWorkExport nests publications and episodes", () => {
+  const exported = createCatalogWorkExport(
+    snapshot,
+    "work-1",
+    new Date("2026-08-27T00:00:00.000Z"),
+  );
+
+  assert.equal(exported.format, "todo-list-catalog-work");
+  assert.equal(exported.data.work.id, "work-1");
+  assert.equal(exported.data.work.publications[0]?.id, "publication-1");
+  assert.equal(
+    exported.data.work.publications[0]?.episodes[0]?.id,
+    "episode-1",
+  );
+  assert.deepEqual(parseCatalogImport(exported, "works"), snapshot);
 });
 
 test("parseCatalogImport reads a complete export", () => {

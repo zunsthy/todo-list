@@ -1,5 +1,11 @@
-import type { CatalogSnapshot } from "../../../types/catalog.js";
-import { createCatalogExport } from "../model/transfer.js";
+import type {
+  CatalogExportDocument,
+  CatalogSnapshot,
+} from "../../../types/catalog.js";
+import {
+  createCatalogExport,
+  createCatalogWorkExport,
+} from "../model/transfer.js";
 
 const safeFileName = (value: string): string =>
   value
@@ -12,16 +18,33 @@ export const downloadCatalog = (
   includeCompletion: boolean,
   name = "todo-list",
 ): void => {
-  const exported = createCatalogExport(snapshot, includeCompletion);
+  downloadDocument(
+    createCatalogExport(snapshot, includeCompletion),
+    name,
+    includeCompletion ? "" : "-without-completion",
+  );
+};
+
+export const downloadCatalogWork = (
+  snapshot: CatalogSnapshot,
+  workId: string,
+  name: string,
+): void => {
+  downloadDocument(createCatalogWorkExport(snapshot, workId), name);
+};
+
+const downloadDocument = (
+  exported: CatalogExportDocument,
+  name: string,
+  suffix = "",
+): void => {
   const blob = new Blob([`${JSON.stringify(exported, null, 2)}\n`], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${safeFileName(name)}-${exported.exportedAt.slice(0, 10)}${
-    includeCompletion ? "" : "-without-completion"
-  }.json`;
+  anchor.download = `${safeFileName(name)}-${exported.exportedAt.slice(0, 10)}${suffix}.json`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

@@ -3,6 +3,7 @@ import type {
   CatalogImportScope,
   CatalogSnapshot,
   CatalogTransferDocument,
+  CatalogWorkTransferDocument,
   CompletionMapping,
   Episode,
   Publication,
@@ -131,13 +132,20 @@ const parseList = <Record extends { id: string }>(
   parse: (item: unknown, index: number) => Record,
 ): Record[] => {
   const records = listValue(value, label).map(parse);
+  assertUniqueIds(records, label);
+  return records;
+};
+
+const assertUniqueIds = <Record extends { id: string }>(
+  records: readonly Record[],
+  label: string,
+): void => {
   const ids = new Set<string>();
   for (const record of records) {
     if (!record.id) invalid(`${label} 中的 id 不能为空`);
     if (ids.has(record.id)) invalid(`${label} 中存在重复 id：${record.id}`);
     ids.add(record.id);
   }
-  return records;
 };
 
 const transferData = (value: unknown): Record<string, unknown> => {
@@ -201,6 +209,94 @@ const parseStoredData = (
         completion: parseList(source.completion, scope, parseCompletion),
       };
   }
+};
+
+const parseStoredWorkData = (
+  value: unknown,
+  scope: CatalogImportScope,
+): CatalogImportData => {
+  const document = objectValue(value, "根节点");
+  if (document.format !== "todo-list-catalog-work") {
+    invalid("format 必须是 todo-list-catalog-work");
+  }
+  if (document.version !== 1) invalid("只支持 version 1");
+  if (typeof document.exportedAt !== "string") {
+    invalid("exportedAt 必须是字符串");
+  }
+
+  const source = objectValue(document.data, "data");
+  const workSource = objectValue(source.work, "data.work");
+  const work = parseStoredWork(workSource, 0);
+  const publications: Publication[] = [];
+  const episodes: Episode[] = [];
+
+  listValue(workSource.publications, "data.work.publications").forEach(
+    (publicationValue, publicationIndex) => {
+      const publicationSource = objectValue(
+        publicationValue,
+        `data.work.publications[${publicationIndex}]`,
+      );
+      const publication = parseStoredPublication(
+        publicationSource,
+        publicationIndex,
+      );
+      if (publication.workId !== work.id) {
+        invalid(
+          `data.work.publications[${publicationIndex}].workId 必须等于作品 id`,
+        );
+      }
+      publications.push(publication);
+
+      listValue(
+        publicationSource.episodes,
+        `data.work.publications[${publicationIndex}].episodes`,
+      ).forEach((episodeValue, episodeIndex) => {
+        const episode = parseStoredEpisode(episodeValue, episodeIndex);
+        if (episode.publicationId !== publication.id) {
+          invalid(
+            `data.work.publications[${publicationIndex}].episodes[${episodeIndex}].publicationId 必须等于出版物 id`,
+          );
+        }
+        episodes.push(episode);
+      });
+    },
+  );
+  assertUniqueIds(publications, "data.work.publications");
+  assertUniqueIds(episodes, "data.work.publications[].episodes");
+
+  const completion = parseList(
+    source.completion,
+    "completion",
+    parseCompletion,
+  );
+  const publicationIds = new Set(publications.map(({ id }) => id));
+  const episodeIds = new Set(episodes.map(({ id }) => id));
+  const relatedCompletion = completion.filter(
+    ({ id }) => id === work.id || publicationIds.has(id) || episodeIds.has(id),
+  );
+
+  if (scope === "all" || scope === "works") {
+    return {
+      works: [work],
+      publications,
+      episodes,
+      completion: relatedCompletion,
+    };
+  }
+  if (scope === "publications") {
+    return {
+      publications,
+      episodes,
+      completion: relatedCompletion.filter(({ id }) => id !== work.id),
+    };
+  }
+  if (scope === "episodes") {
+    return {
+      episodes,
+      completion: relatedCompletion.filter(({ id }) => episodeIds.has(id)),
+    };
+  }
+  return { completion: relatedCompletion };
 };
 
 const createUniqueId = (
@@ -516,6 +612,34 @@ export const createCatalogExport = (
   },
 });
 
+export const createCatalogWorkExport = (
+  snapshot: CatalogSnapshot,
+  workId: string,
+  exportedAt = new Date(),
+): CatalogWorkTransferDocument => {
+  const selected = selectCatalogWork(snapshot, workId);
+  const work = selected.works[0];
+  if (!work) throw new Error(`找不到要导出的作品：${workId}`);
+
+  return {
+    format: "todo-list-catalog-work",
+    version: 1,
+    exportedAt: exportedAt.toISOString(),
+    data: {
+      work: {
+        ...work,
+        publications: selected.publications.map((publication) => ({
+          ...publication,
+          episodes: selected.episodes.filter(
+            ({ publicationId }) => publicationId === publication.id,
+          ),
+        })),
+      },
+      completion: selected.completion,
+    },
+  };
+};
+
 export const parseCatalogImport = (
   value: unknown,
   scope: CatalogImportScope,
@@ -524,7 +648,9 @@ export const parseCatalogImport = (
   createId: () => string = () => globalThis.crypto.randomUUID(),
 ): CatalogImportData => {
   const data = isTransferDocument(value)
-    ? parseStoredData(value, scope)
+    ? objectValue(value, "根节点").format === "todo-list-catalog-work"
+      ? parseStoredWorkData(value, scope)
+      : parseStoredData(value, scope)
     : parseExternalData(
         value,
         scope,

@@ -82,6 +82,61 @@ Todo-list 可以导入两类 JSON：应用自身导出的带版本备份，以�
 整体导入要求 `works`、`publications` 和 `episodes` 都是数组。`completion` 可以省略。
 应用自己导出的“不含完成信息”文件可以直接整体导入。
 
+## 单作品导出文件
+
+作品操作区的“导出”使用 `todo-list-catalog-work` 格式。出版物嵌套在作品中，集继续嵌套在
+所属出版物中，因此一份文件本身就是完整的作品数据：
+
+```json
+{
+  "format": "todo-list-catalog-work",
+  "version": 1,
+  "exportedAt": "2026-08-27T08:00:00.000Z",
+  "data": {
+    "work": {
+      "id": "a59ccf3e-2f87-4cf5-9b3d-0e5c5ea97662",
+      "title": "示例作品",
+      "aliases": [],
+      "authors": [],
+      "otherInfo": "",
+      "publications": [
+        {
+          "id": "e63da685-ad3e-41d1-b697-02a803ac5518",
+          "workId": "a59ccf3e-2f87-4cf5-9b3d-0e5c5ea97662",
+          "category": "动画",
+          "title": "第一季",
+          "subtitle": "",
+          "date": "2026-01-10",
+          "isbn": "",
+          "episodes": [
+            {
+              "id": "75acc5b3-6440-4098-b81d-ab0ad18b22ae",
+              "publicationId": "e63da685-ad3e-41d1-b697-02a803ac5518",
+              "number": "01",
+              "title": "第一集",
+              "date": "2026-01-10"
+            }
+          ]
+        }
+      ]
+    },
+    "completion": [
+      {
+        "id": "75acc5b3-6440-4098-b81d-ab0ad18b22ae",
+        "completed": true
+      }
+    ]
+  }
+}
+```
+
+导入器会把嵌套结构重新展开到 `works`、`publications` 和 `episodes` ObjectStore：
+
+- 选择“整体数据”或“作品”时，导入作品及其全部出版物、集和完成信息。
+- 选择“出版物”时，导入出版物、其下的集以及相关完成信息。
+- 选择“集”时，只导入集及集的完成信息。
+- 选择“完成信息”时，只导入完成映射。
+
 ## 备份中的各层字段
 
 ### `works`：作品层
