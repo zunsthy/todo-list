@@ -470,6 +470,36 @@ export const combineCatalogImports = (
   return data;
 };
 
+export const selectCatalogWork = (
+  snapshot: CatalogSnapshot,
+  workId: string,
+): CatalogSnapshot => {
+  const works = snapshot.works.filter(({ id }) => id === workId);
+  if (works.length === 0) {
+    return { works: [], publications: [], episodes: [], completion: [] };
+  }
+
+  const publications = snapshot.publications.filter(
+    (publication) => publication.workId === workId,
+  );
+  const publicationIds = new Set(publications.map(({ id }) => id));
+  const episodes = snapshot.episodes.filter(({ publicationId }) =>
+    publicationIds.has(publicationId),
+  );
+  const entityIds = new Set([
+    workId,
+    ...publications.map(({ id }) => id),
+    ...episodes.map(({ id }) => id),
+  ]);
+
+  return {
+    works,
+    publications,
+    episodes,
+    completion: snapshot.completion.filter(({ id }) => entityIds.has(id)),
+  };
+};
+
 export const createCatalogExport = (
   snapshot: CatalogSnapshot,
   includeCompletion: boolean,

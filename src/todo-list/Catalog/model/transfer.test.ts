@@ -5,6 +5,7 @@ import {
   combineCatalogImports,
   createCatalogExport,
   parseCatalogImport,
+  selectCatalogWork,
 } from "./transfer.ts";
 
 const snapshot: CatalogSnapshot = {
@@ -175,5 +176,70 @@ test("combineCatalogImports rejects cross-file entity ID collisions", () => {
         },
       ]),
     /同时出现在 works 和 episodes/,
+  );
+});
+
+test("selectCatalogWork includes only one work and its related data", () => {
+  const selected = selectCatalogWork(
+    {
+      works: [
+        ...snapshot.works,
+        {
+          id: "work-2",
+          title: "其他作品",
+          aliases: [],
+          authors: [],
+          otherInfo: "",
+        },
+      ],
+      publications: [
+        ...snapshot.publications,
+        {
+          id: "publication-2",
+          workId: "work-2",
+          category: "电影",
+          title: "其他出版物",
+          subtitle: "",
+          date: "2026-02-01",
+          isbn: "",
+        },
+      ],
+      episodes: [
+        ...snapshot.episodes,
+        {
+          id: "episode-2",
+          publicationId: "publication-2",
+          number: "01",
+          title: "其他集",
+          date: "2026-02-01",
+        },
+      ],
+      completion: [
+        { id: "work-1", completed: true },
+        { id: "publication-1", completed: false },
+        { id: "episode-1", completed: true },
+        { id: "work-2", completed: false },
+        { id: "publication-2", completed: false },
+        { id: "episode-2", completed: false },
+      ],
+    },
+    "work-1",
+  );
+
+  assert.deepEqual(
+    selected.works.map(({ id }) => id),
+    ["work-1"],
+  );
+  assert.deepEqual(
+    selected.publications.map(({ id }) => id),
+    ["publication-1"],
+  );
+  assert.deepEqual(
+    selected.episodes.map(({ id }) => id),
+    ["episode-1"],
+  );
+  assert.deepEqual(
+    selected.completion.map(({ id }) => id),
+    ["work-1", "publication-1", "episode-1"],
   );
 });

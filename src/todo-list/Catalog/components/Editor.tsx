@@ -9,6 +9,8 @@ import { EpisodeForm } from "../forms/EpisodeForm.js";
 import { PublicationForm } from "../forms/PublicationForm.js";
 import { WorkForm } from "../forms/WorkForm.js";
 import { buildTimeline } from "../model/timeline.js";
+import { selectCatalogWork } from "../model/transfer.js";
+import { downloadCatalog } from "../utils/download.js";
 import { DataTransfer } from "./DataTransfer.js";
 import { EditorTrigger } from "./EditorTrigger.js";
 
@@ -119,6 +121,18 @@ export const Editor = ({
                     }
                   >
                     编辑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadCatalog(
+                        selectCatalogWork(snapshot, work.id),
+                        true,
+                        `todo-list-${work.title}`,
+                      )
+                    }
+                  >
+                    导出
                   </button>
                   <button
                     className="delete-action"

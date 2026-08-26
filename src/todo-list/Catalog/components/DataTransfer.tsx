@@ -7,29 +7,9 @@ import type {
 import { useCatalogActions } from "../context.js";
 import {
   combineCatalogImports,
-  createCatalogExport,
   parseCatalogImport,
 } from "../model/transfer.js";
-
-const downloadCatalog = (
-  snapshot: DataTransferProps["snapshot"],
-  includeCompletion: boolean,
-): void => {
-  const exported = createCatalogExport(snapshot, includeCompletion);
-  const blob = new Blob([`${JSON.stringify(exported, null, 2)}\n`], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `todo-list-${exported.exportedAt.slice(0, 10)}${
-    includeCompletion ? "" : "-without-completion"
-  }.json`;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-};
+import { downloadCatalog } from "../utils/download.js";
 
 export const DataTransfer = ({ snapshot }: DataTransferProps) => {
   const { importData } = useCatalogActions();
