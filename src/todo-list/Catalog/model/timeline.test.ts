@@ -322,6 +322,53 @@ test("buildTimeline separates novel volumes, OVA entries, and anime cours", () =
   );
 });
 
+test("buildTimeline packs standalone publications from one quarter into one cell", () => {
+  const manga: CatalogWork[] = [
+    {
+      id: "yuru-camp",
+      title: "摇曳露营△",
+      aliases: [],
+      authors: ["Afro"],
+      otherInfo: "",
+      completed: false,
+      publications: [
+        {
+          id: "volume-9",
+          workId: "yuru-camp",
+          category: "漫画",
+          timelineGroup: "本篇",
+          title: "摇曳露营△ 第9卷",
+          subtitle: "漫画单行本",
+          date: "2020-01-10",
+          isbn: "978-4-8322-7149-4",
+          completed: false,
+          episodes: [],
+        },
+        {
+          id: "volume-10",
+          workId: "yuru-camp",
+          category: "漫画",
+          timelineGroup: "本篇",
+          title: "摇曳露营△ 第10卷",
+          subtitle: "漫画单行本",
+          date: "2020-03-12",
+          isbn: "978-4-8322-7174-6",
+          completed: false,
+          episodes: [],
+        },
+      ],
+    },
+  ];
+  const group = buildTimeline(manga, 2024).works[0]!.tracks[0]!.groups[0]!;
+
+  assert.equal(group.lanes.length, 1);
+  assert.equal(group.lanes[0]!.entries.length, 1);
+  assert.deepEqual(
+    group.lanes[0]!.entries[0]!.items.map(({ target }) => target.id),
+    ["volume-9", "volume-10"],
+  );
+});
+
 test("buildTimeline only splits animation with continuous episode numbers", () => {
   const discontinuous: CatalogWork[] = [
     {

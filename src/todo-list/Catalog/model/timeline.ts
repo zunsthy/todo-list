@@ -181,20 +181,22 @@ const categoryColor = (category: string): string => {
   return colors[hash % colors.length]!;
 };
 
+const canShareQuarterCell = (entry: TimelineEntry): boolean =>
+  entry.span === 1 &&
+  entry.items.every(
+    ({ target, episodeCount }) =>
+      target.storeName === "episodes" ||
+      (target.storeName === "publications" && episodeCount === 0),
+  );
+
 const mergeQuarterEntries = (entries: TimelineEntry[]): TimelineEntry[] => {
   const merged: TimelineEntry[] = [];
   for (const entry of entries) {
-    const canShare =
-      entry.span === 1 &&
-      entry.items.every(({ target }) => target.storeName === "episodes");
-    const cell = canShare
+    const cell = canShareQuarterCell(entry)
       ? merged.find(
           (candidate) =>
             candidate.startColumn === entry.startColumn &&
-            candidate.span === 1 &&
-            candidate.items.every(
-              ({ target }) => target.storeName === "episodes",
-            ),
+            canShareQuarterCell(candidate),
         )
       : undefined;
     if (cell) {
