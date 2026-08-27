@@ -490,3 +490,62 @@ test("buildTimeline uses a separated EX episode as its own marker", () => {
   assert.equal(extra?.subtitle, "第1期 · EX");
   assert.equal(extra?.target.storeName, "episodes");
 });
+
+test("buildTimeline displays OAD episodes as discrete items", () => {
+  const withOad: CatalogWork[] = [
+    {
+      id: "work",
+      title: "作品",
+      aliases: [],
+      authors: [],
+      otherInfo: "",
+      completed: false,
+      publications: [
+        {
+          id: "oad",
+          workId: "work",
+          category: "OAD",
+          title: "OAD 系列",
+          subtitle: "",
+          date: "2019-07-09",
+          isbn: "",
+          completed: false,
+          episodes: [
+            {
+              id: "oad-1",
+              publicationId: "oad",
+              number: "1",
+              title: "第一集",
+              date: "2019-07-09",
+              completed: false,
+            },
+            {
+              id: "oad-2",
+              publicationId: "oad",
+              number: "2",
+              title: "第二集",
+              date: "2020-03-26",
+              completed: false,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+  const entries = buildTimeline(withOad, 2024).works[0]!.tracks[0]!.groups[0]!
+    .lanes[0]!.entries;
+
+  assert.deepEqual(
+    entries.flatMap(({ items }) =>
+      items.map(({ target, title }) => [target.storeName, target.id, title]),
+    ),
+    [
+      ["episodes", "oad-2", "第二集"],
+      ["episodes", "oad-1", "第一集"],
+    ],
+  );
+  assert.deepEqual(
+    entries.map(({ span }) => span),
+    [1, 1],
+  );
+});

@@ -19,6 +19,13 @@ const colors = [
   "#b35c91",
 ];
 
+const discreteEpisodeCategories = new Set([
+  "小说",
+  "movie",
+  "ova",
+  "oad",
+]);
+
 const toQuarter = (date: string | undefined): number | null => {
   const match = date?.match(/^(\d{4})-(\d{2})/);
   if (!match) return null;
@@ -165,7 +172,7 @@ const timelineItems = (publication: CatalogPublication): TimelineItem[] => {
   const category = publication.category.trim().toLocaleLowerCase();
   if (
     publication.episodes.length > 0 &&
-    (category === "小说" || category === "ova")
+    discreteEpisodeCategories.has(category)
   ) {
     return discreteItems(publication);
   }
