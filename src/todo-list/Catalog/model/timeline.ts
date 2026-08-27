@@ -212,6 +212,9 @@ const mergeQuarterEntries = (entries: TimelineEntry[]): TimelineEntry[] => {
       merged.push({ ...entry, items: [...entry.items] });
     }
   }
+  for (const entry of merged) {
+    entry.items.sort((left, right) => right.date.localeCompare(left.date));
+  }
   return merged;
 };
 

@@ -306,7 +306,7 @@ test("buildTimeline separates novel volumes, OVA entries, and anime cours", () =
   assert.equal(novelGroup?.lanes.length, 1);
   assert.deepEqual(
     sharedQuarter?.items.map(({ key }) => key),
-    ["volume-22", "volume-23"],
+    ["volume-23", "volume-22"],
   );
   assert.deepEqual(
     movieEntries.map(({ span }) => span),
@@ -365,7 +365,7 @@ test("buildTimeline packs standalone publications from one quarter into one cell
   assert.equal(group.lanes[0]!.entries.length, 1);
   assert.deepEqual(
     group.lanes[0]!.entries[0]!.items.map(({ target }) => target.id),
-    ["volume-9", "volume-10"],
+    ["volume-10", "volume-9"],
   );
 });
 
