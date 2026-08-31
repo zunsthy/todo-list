@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import type {
   EditorTriggerDrag,
   EditorTriggerPosition,
@@ -32,17 +32,36 @@ const loadPosition = (): EditorTriggerPosition | null => {
 
 const fitInViewport = (
   position: EditorTriggerPosition,
-  button: HTMLButtonElement,
+  width: number,
+  height: number,
 ): EditorTriggerPosition => ({
-  x: Math.min(
-    Math.max(0, position.x),
-    Math.max(0, window.innerWidth - button.offsetWidth),
-  ),
+  x: Math.min(Math.max(0, position.x), Math.max(0, window.innerWidth - width)),
   y: Math.min(
     Math.max(0, position.y),
-    Math.max(0, window.innerHeight - button.offsetHeight),
+    Math.max(0, window.innerHeight - height),
   ),
 });
+
+const pixelValue = (value: string): number => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const measureAnchor = (button: HTMLButtonElement): EditorTriggerPosition => {
+  const style = window.getComputedStyle(button);
+  return {
+    x: window.innerWidth - pixelValue(style.right) - button.offsetWidth,
+    y: pixelValue(style.top),
+  };
+};
+
+const applyPosition = (
+  button: HTMLButtonElement,
+  position: EditorTriggerPosition,
+  anchor: EditorTriggerPosition,
+): void => {
+  button.style.transform = `translate3d(${position.x - anchor.x}px, ${position.y - anchor.y}px, 0)`;
+};
 
 const savePosition = (position: EditorTriggerPosition): void => {
   try {
@@ -56,23 +75,33 @@ export const EditorTrigger = ({ onOpen }: EditorTriggerProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<EditorTriggerDrag | null>(null);
   const ignoreClickRef = useRef(false);
-  const [position, setPosition] = useState<EditorTriggerPosition | null>(
-    loadPosition,
-  );
-  const positionRef = useRef(position);
+  const anchorRef = useRef<EditorTriggerPosition | null>(null);
+  const [initialPosition] = useState(loadPosition);
+  const positionRef = useRef(initialPosition);
 
-  const moveTo = (next: EditorTriggerPosition): void => {
+  const moveTo = (
+    next: EditorTriggerPosition,
+    button: HTMLButtonElement,
+  ): void => {
     positionRef.current = next;
-    setPosition(next);
+    const anchor = anchorRef.current ?? measureAnchor(button);
+    anchorRef.current = anchor;
+    applyPosition(button, next, anchor);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleResize = (): void => {
       const button = buttonRef.current;
+      if (!button) return;
+      anchorRef.current = measureAnchor(button);
       const current = positionRef.current;
-      if (!button || !current) return;
-      const next = fitInViewport(current, button);
-      moveTo(next);
+      if (!current) return;
+      const next = fitInViewport(
+        current,
+        button.offsetWidth,
+        button.offsetHeight,
+      );
+      moveTo(next, button);
       savePosition(next);
     };
 
@@ -84,12 +113,15 @@ export const EditorTrigger = ({ onOpen }: EditorTriggerProps) => {
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
     if (event.button !== 0) return;
     const bounds = event.currentTarget.getBoundingClientRect();
+    anchorRef.current = measureAnchor(event.currentTarget);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       offsetX: event.clientX - bounds.left,
       offsetY: event.clientY - bounds.top,
+      width: bounds.width,
+      height: bounds.height,
       moved: false,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -109,8 +141,10 @@ export const EditorTrigger = ({ onOpen }: EditorTriggerProps) => {
           x: event.clientX - drag.offsetX,
           y: event.clientY - drag.offsetY,
         },
-        event.currentTarget,
+        drag.width,
+        drag.height,
       ),
+      event.currentTarget,
     );
   };
 
@@ -144,11 +178,6 @@ export const EditorTrigger = ({ onOpen }: EditorTriggerProps) => {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       ref={buttonRef}
-      style={
-        position
-          ? { left: position.x, right: "auto", top: position.y }
-          : undefined
-      }
       title="拖拽移动，单击打开"
       type="button"
     >
