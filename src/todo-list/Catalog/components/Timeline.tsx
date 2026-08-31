@@ -98,9 +98,22 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
                       {lanes.map(({ entries }, laneIndex) => (
                         <div className="timeline-lane" key={laneIndex}>
                           {entries.map(
-                            ({ items, startColumn, span, color }) => {
+                            ({
+                              items,
+                              startColumn,
+                              span,
+                              startInset = 0,
+                              endInset = 0,
+                              color,
+                            }) => {
                               const itemStyle: TimelineStyle = {
                                 gridColumn: `${startColumn} / span ${span}`,
+                                ...(startInset > 0 && {
+                                  marginInlineStart: `calc(0.1rem + ${(startInset / span) * 100}%)`,
+                                }),
+                                ...(endInset > 0 && {
+                                  marginInlineEnd: `calc(0.1rem + ${(endInset / span) * 100}%)`,
+                                }),
                                 "--item-color": color,
                               };
 

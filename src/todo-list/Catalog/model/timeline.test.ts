@@ -131,20 +131,36 @@ test("buildTimeline lays quarters out from the current year back to 2000", () =>
   assert.equal(timeline.works[0]?.undated[0]?.target.id, "old");
 });
 
-test("buildTimeline separates semantic series and overlapping entries", () => {
+test("buildTimeline separates semantic series and shares an edge quarter with a supplement", () => {
   const animation = buildTimeline(works, 2024).works[0]?.tracks.find(
     ({ category }) => category === "动画",
   );
   const main = animation?.groups.find(({ name }) => name === "本篇");
   const spinoff = animation?.groups.find(({ name }) => name === "GGO 外传");
 
-  assert.equal(main?.lanes.length, 2);
+  assert.equal(main?.lanes.length, 1);
   assert.equal(spinoff?.lanes.length, 1);
   assert.deepEqual(
     main?.lanes.flatMap(({ entries }) =>
       entries.flatMap(({ items }) => items.map(({ target }) => target.id)),
     ),
-    ["anime", "anime-overlap"],
+    ["anime-overlap", "anime"],
+  );
+  const supplement = main?.lanes[0]?.entries[0];
+  const series = main?.lanes[0]?.entries[1];
+  assert.deepEqual(
+    {
+      supplementStart: supplement?.startInset,
+      supplementEnd: supplement?.endInset,
+      seriesStart: series?.startInset,
+      seriesEnd: series?.endInset,
+    },
+    {
+      supplementStart: undefined,
+      supplementEnd: 0.5,
+      seriesStart: 0.5,
+      seriesEnd: undefined,
+    },
   );
 });
 

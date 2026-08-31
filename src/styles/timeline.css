@@ -181,6 +181,7 @@
 .timeline-cell {
   z-index: 2;
   display: flex;
+  grid-row: 1;
   gap: 0.08rem;
   min-width: 0;
   margin: 0.08rem 0.1rem;

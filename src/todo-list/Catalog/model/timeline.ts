@@ -19,12 +19,7 @@ const colors = [
   "#b35c91",
 ];
 
-const discreteEpisodeCategories = new Set([
-  "小说",
-  "movie",
-  "ova",
-  "oad",
-]);
+const discreteEpisodeCategories = new Set(["小说", "movie", "ova", "oad"]);
 
 const toQuarter = (date: string | undefined): number | null => {
   const match = date?.match(/^(\d{4})-(\d{2})/);
@@ -218,15 +213,54 @@ const mergeQuarterEntries = (entries: TimelineEntry[]): TimelineEntry[] => {
   return merged;
 };
 
+const shareEdgeQuarters = (entries: TimelineEntry[]): TimelineEntry[] => {
+  const adjusted = entries.map((entry) => ({ ...entry }));
+  const spanning = adjusted.filter(({ span }) => span > 1);
+
+  for (const compact of adjusted.filter(canShareQuarterCell)) {
+    const candidates = spanning.flatMap((entry) => {
+      const edges: { entry: TimelineEntry; edge: "start" | "end" }[] = [];
+      if (entry.startColumn === compact.startColumn && !entry.startInset) {
+        edges.push({ entry, edge: "start" });
+      }
+      if (
+        entry.startColumn + entry.span - 1 === compact.startColumn &&
+        !entry.endInset
+      ) {
+        edges.push({ entry, edge: "end" });
+      }
+      return edges;
+    });
+
+    if (candidates.length !== 1) continue;
+    const { entry, edge } = candidates[0]!;
+    if (edge === "start") {
+      compact.endInset = 0.5;
+      entry.startInset = 0.5;
+    } else {
+      entry.endInset = 0.5;
+      compact.startInset = 0.5;
+    }
+  }
+
+  return adjusted;
+};
+
+const entryStart = (entry: TimelineEntry): number =>
+  entry.startColumn + (entry.startInset ?? 0);
+
+const entryEnd = (entry: TimelineEntry): number =>
+  entry.startColumn + entry.span - (entry.endInset ?? 0);
+
 const packLanes = (entries: TimelineEntry[]): TimelineGroup["lanes"] => {
   const lanes: TimelineGroup["lanes"] = [];
 
-  for (const entry of mergeQuarterEntries(entries).sort(
-    (left, right) => left.startColumn - right.startColumn,
+  for (const entry of shareEdgeQuarters(mergeQuarterEntries(entries)).sort(
+    (left, right) => entryStart(left) - entryStart(right),
   )) {
     const lane = lanes.find(({ entries: laneEntries }) => {
       const last = laneEntries[laneEntries.length - 1];
-      return !last || last.startColumn + last.span <= entry.startColumn;
+      return !last || entryEnd(last) <= entryStart(entry);
     });
 
     if (lane) {

@@ -195,6 +195,8 @@ export interface EditorTriggerDrag {
   startY: number;
   offsetX: number;
   offsetY: number;
+  width: number;
+  height: number;
   moved: boolean;
 }
 
@@ -219,6 +221,8 @@ export interface TimelineEntry {
   items: TimelineItem[];
   startColumn: number;
   span: number;
+  startInset?: number;
+  endInset?: number;
   color: string;
 }
 
