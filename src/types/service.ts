@@ -5,6 +5,10 @@ import type {
   CatalogRecordTarget,
   CatalogSnapshot,
 } from "./catalog.js";
+import type {
+  CatalogBridgeWorkerCommand,
+  CatalogBridgeWorkerEvent,
+} from "./catalog-bridge.js";
 
 interface ServiceContract {
   all: { params: Record<string, never>; result: CatalogSnapshot };
@@ -46,7 +50,10 @@ export interface SerializedError {
 }
 
 export type WorkerCommand =
-  { type: "start" } | { type: "stop" } | ServiceRequest;
+  | { type: "start" }
+  | { type: "stop" }
+  | ServiceRequest
+  | CatalogBridgeWorkerCommand;
 
 export type WorkerResponse =
   | { type: "ready"; error?: SerializedError }
@@ -55,7 +62,8 @@ export type WorkerResponse =
       id: string;
       error?: SerializedError;
       data?: unknown;
-    };
+    }
+  | CatalogBridgeWorkerEvent;
 
 export type Respond = (response: WorkerResponse) => void;
 export type PendingCallback = (error: Error | null, data?: unknown) => void;

@@ -12,15 +12,20 @@ import { buildTimeline } from "../model/timeline.js";
 import { downloadCatalogWork } from "../utils/download.js";
 import { DataTransfer } from "./DataTransfer.js";
 import { EditorTrigger } from "./EditorTrigger.js";
+import { CatalogBridgeControl } from "../../bridge/Control.js";
+import { useCatalogBridge } from "../../bridge/context.js";
 
 export const Editor = ({
   works,
   snapshot,
+  ready,
   editing,
   onEditingChange,
 }: CatalogEditorProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { deleteRecord, setCompletion } = useCatalogActions();
+  const catalogBridge = useCatalogBridge();
+  const readOnly = catalogBridge.enabled;
   const undatedIds = useMemo(
     () =>
       new Set(
@@ -35,6 +40,7 @@ export const Editor = ({
     editing?.storeName === storeName && editing.id === id;
 
   const handleDelete = (target: CatalogRecordTarget, label: string): void => {
+    if (readOnly) return;
     if (!window.confirm(`确认删除${label}？关联的下级数据也会被删除。`)) {
       return;
     }
@@ -49,6 +55,7 @@ export const Editor = ({
     completed: boolean,
   ): void => {
     event.preventDefault();
+    if (readOnly) return;
     void setCompletion(id, !completed).catch(console.error);
   };
 
@@ -97,10 +104,13 @@ export const Editor = ({
           </form>
         </div>
 
-        <DataTransfer snapshot={snapshot} />
+        <CatalogBridgeControl ready={ready} snapshot={snapshot} />
+        <DataTransfer readOnly={readOnly} snapshot={snapshot} />
         <details className="editor-create">
-          <summary>添加作品</summary>
-          <WorkForm />
+          <summary>
+            {readOnly ? "添加作品（服务端控制中）" : "添加作品"}
+          </summary>
+          {!readOnly && <WorkForm />}
         </details>
 
         <div className="editor-work-list">
@@ -114,6 +124,7 @@ export const Editor = ({
                 <h3>{work.title}</h3>
                 <div className="editor-record-actions">
                   <button
+                    disabled={readOnly}
                     type="button"
                     onClick={() =>
                       onEditingChange({ storeName: "works", id: work.id })
@@ -135,6 +146,7 @@ export const Editor = ({
                   </button>
                   <button
                     className="delete-action"
+                    disabled={readOnly}
                     type="button"
                     onClick={() =>
                       handleDelete(
@@ -148,7 +160,7 @@ export const Editor = ({
                 </div>
               </div>
 
-              {isEditing("works", work.id) && (
+              {!readOnly && isEditing("works", work.id) && (
                 <WorkForm
                   work={work}
                   onCancel={() => onEditingChange(null)}
@@ -158,7 +170,7 @@ export const Editor = ({
 
               <details className="editor-children">
                 <summary>出版物（{work.publications.length}）</summary>
-                <PublicationForm workId={work.id} />
+                {!readOnly && <PublicationForm workId={work.id} />}
 
                 {work.publications.map((publication) => (
                   <section
@@ -175,6 +187,7 @@ export const Editor = ({
                       </strong>
                       <div className="editor-record-actions">
                         <button
+                          disabled={readOnly}
                           type="button"
                           onClick={() =>
                             onEditingChange({
@@ -187,6 +200,7 @@ export const Editor = ({
                         </button>
                         <button
                           className="delete-action"
+                          disabled={readOnly}
                           type="button"
                           onClick={() =>
                             handleDelete(
@@ -203,7 +217,7 @@ export const Editor = ({
                       </div>
                     </div>
 
-                    {isEditing("publications", publication.id) && (
+                    {!readOnly && isEditing("publications", publication.id) && (
                       <PublicationForm
                         publication={publication}
                         workId={work.id}
@@ -214,7 +228,9 @@ export const Editor = ({
 
                     <details className="editor-children">
                       <summary>集（{publication.episodes.length}）</summary>
-                      <EpisodeForm publicationId={publication.id} />
+                      {!readOnly && (
+                        <EpisodeForm publicationId={publication.id} />
+                      )}
                       {publication.episodes.length > 0 && (
                         <ul className="editor-episode-list">
                           {publication.episodes.map((episode) => (
@@ -226,6 +242,7 @@ export const Editor = ({
                               <div
                                 className="editor-episode-content"
                                 data-completed={episode.completed}
+                                aria-disabled={readOnly}
                                 onDoubleClick={(event) =>
                                   toggleCompletion(
                                     event,
@@ -233,7 +250,9 @@ export const Editor = ({
                                     episode.completed,
                                   )
                                 }
-                                title="双击切换完成状态"
+                                title={
+                                  readOnly ? "服务端控制中" : "双击切换完成状态"
+                                }
                               >
                                 <span>{episode.number}</span>
                                 <strong>{episode.title}</strong>
@@ -241,6 +260,7 @@ export const Editor = ({
                               </div>
                               <div className="editor-record-actions">
                                 <button
+                                  disabled={readOnly}
                                   type="button"
                                   onClick={() =>
                                     onEditingChange({
@@ -253,6 +273,7 @@ export const Editor = ({
                                 </button>
                                 <button
                                   className="delete-action"
+                                  disabled={readOnly}
                                   type="button"
                                   onClick={() =>
                                     handleDelete(
@@ -267,14 +288,15 @@ export const Editor = ({
                                   删除
                                 </button>
                               </div>
-                              {isEditing("episodes", episode.id) && (
-                                <EpisodeForm
-                                  episode={episode}
-                                  publicationId={publication.id}
-                                  onCancel={() => onEditingChange(null)}
-                                  onSaved={() => onEditingChange(null)}
-                                />
-                              )}
+                              {!readOnly &&
+                                isEditing("episodes", episode.id) && (
+                                  <EpisodeForm
+                                    episode={episode}
+                                    publicationId={publication.id}
+                                    onCancel={() => onEditingChange(null)}
+                                    onSaved={() => onEditingChange(null)}
+                                  />
+                                )}
                             </li>
                           ))}
                         </ul>

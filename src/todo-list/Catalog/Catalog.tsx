@@ -10,6 +10,8 @@ import type {
   SetCompletion,
 } from "../../types/catalog.js";
 import { useService } from "../service/index.js";
+import { CatalogBridgeBanner } from "../bridge/Control.js";
+import { useCatalogBridge } from "../bridge/context.js";
 import { Editor } from "./components/Editor.js";
 import { Timeline } from "./components/Timeline.js";
 import { CatalogActionsContext } from "./context.js";
@@ -30,9 +32,11 @@ const emptyCatalog = (): CatalogSnapshot => ({
 
 export const Catalog = () => {
   const [snapshot, setSnapshot] = useState<CatalogSnapshot>(emptyCatalog);
+  const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
   const [editing, setEditing] = useState<CatalogRecordTarget | null>(null);
   const invoke = useService();
+  const catalogBridge = useCatalogBridge();
 
   const addRecord = useCallback<SaveCatalogRecord>(
     (mutation) =>
@@ -114,7 +118,7 @@ export const Catalog = () => {
     [invoke],
   );
 
-  useEffect(() => {
+  const loadCatalog = useCallback((): void => {
     invoke("all", {}, (error, data) => {
       if (error) {
         setLoadError(error);
@@ -125,8 +129,20 @@ export const Catalog = () => {
         return;
       }
       setSnapshot(data);
+      setLoadError(null);
+      setReady(true);
     });
   }, [invoke]);
+
+  useEffect(loadCatalog, [
+    loadCatalog,
+    catalogBridge.changeVersion,
+    catalogBridge.enabled,
+  ]);
+
+  useEffect(() => {
+    if (catalogBridge.enabled) setEditing(null);
+  }, [catalogBridge.enabled]);
 
   const works = useMemo(() => buildCatalog(snapshot), [snapshot]);
   const actions = useMemo<CatalogActions>(
@@ -141,14 +157,23 @@ export const Catalog = () => {
   );
 
   if (loadError) {
-    return <p role="alert">无法读取作品目录。</p>;
+    return (
+      <>
+        <CatalogBridgeBanner />
+        <p role="alert" title={loadError.message}>
+          无法读取作品目录。
+        </p>
+      </>
+    );
   }
 
   return (
     <CatalogActionsContext.Provider value={actions}>
+      <CatalogBridgeBanner />
       <Editor
         editing={editing}
         onEditingChange={setEditing}
+        ready={ready}
         snapshot={snapshot}
         works={works}
       />

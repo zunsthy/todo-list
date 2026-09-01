@@ -11,7 +11,10 @@ import {
 } from "../model/transfer.js";
 import { downloadCatalog } from "../utils/download.js";
 
-export const DataTransfer = ({ snapshot }: DataTransferProps) => {
+export const DataTransfer = ({
+  snapshot,
+  readOnly = false,
+}: DataTransferProps) => {
   const { importData } = useCatalogActions();
   const [scope, setScope] = useState<CatalogImportScope>("all");
   const [parentId, setParentId] = useState("");
@@ -20,6 +23,7 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
 
   const handleImport = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    if (readOnly) return;
     const form = event.currentTarget;
     const input = form.elements.namedItem("file");
     if (!(input instanceof HTMLInputElement) || !input.files?.[0]) return;
@@ -98,6 +102,7 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
               <label>
                 <span>导入范围</span>
                 <select
+                  disabled={readOnly}
                   name="scope"
                   value={scope}
                   onChange={(event) => {
@@ -116,6 +121,7 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
                 <label>
                   <span>外部数据所属作品</span>
                   <select
+                    disabled={readOnly}
                     value={parentId}
                     onChange={(event) => setParentId(event.currentTarget.value)}
                   >
@@ -132,6 +138,7 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
                 <label>
                   <span>外部数据所属出版物</span>
                   <select
+                    disabled={readOnly}
                     value={parentId}
                     onChange={(event) => setParentId(event.currentTarget.value)}
                   >
@@ -148,13 +155,16 @@ export const DataTransfer = ({ snapshot }: DataTransferProps) => {
                 <span>JSON 文件（可多选）</span>
                 <input
                   accept="application/json,.json"
+                  disabled={readOnly}
                   multiple
                   name="file"
                   required
                   type="file"
                 />
               </label>
-              <button type="submit">导入</button>
+              <button disabled={readOnly} type="submit">
+                导入
+              </button>
               <small>
                 Todo-list 备份保留 UUID；外部数据生成 UUID
                 并追加。导入不会删除现有数据。

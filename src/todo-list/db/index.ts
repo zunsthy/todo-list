@@ -371,3 +371,45 @@ export const importData = (
   }
   for (const record of data.completion ?? []) completion.put(record);
 };
+
+export const replaceCatalog = (
+  snapshot: CatalogSnapshot,
+  callback: DatabaseCallback,
+): void => {
+  if (!database) {
+    callback(new Error("The database is not open"));
+    return;
+  }
+
+  const transaction = database.transaction([...storeNames], "readwrite");
+  let settled = false;
+  const finish = (error: Error | null): void => {
+    if (settled) return;
+    settled = true;
+    callback(error);
+  };
+  transaction.addEventListener("error", () => {
+    finish(requestError(transaction.error, "Unable to replace catalog data"));
+  });
+  transaction.addEventListener("abort", () => {
+    finish(
+      requestError(transaction.error, "Replacing catalog data was aborted"),
+    );
+  });
+  transaction.addEventListener("complete", () => finish(null));
+
+  for (const storeName of storeNames)
+    transaction.objectStore(storeName).clear();
+  for (const record of snapshot.works) {
+    transaction.objectStore("works").put(record);
+  }
+  for (const record of snapshot.publications) {
+    transaction.objectStore("publications").put(record);
+  }
+  for (const record of snapshot.episodes) {
+    transaction.objectStore("episodes").put(record);
+  }
+  for (const record of snapshot.completion) {
+    transaction.objectStore("completion").put(record);
+  }
+};

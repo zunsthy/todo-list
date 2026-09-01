@@ -33,10 +33,23 @@ export const downloadCatalogWork = (
   downloadDocument(createCatalogWorkExport(snapshot, workId), name);
 };
 
+export const downloadCatalogBeforeServerControl = (
+  snapshot: CatalogSnapshot,
+): void => {
+  const exported = createCatalogExport(snapshot, true);
+  downloadDocument(
+    exported,
+    `todo-list-before-server-control-${exported.exportedAt}`,
+    "",
+    false,
+  );
+};
+
 const downloadDocument = (
   exported: CatalogExportDocument,
   name: string,
   suffix = "",
+  includeDate = true,
 ): void => {
   const blob = new Blob([`${JSON.stringify(exported, null, 2)}\n`], {
     type: "application/json",
@@ -44,7 +57,8 @@ const downloadDocument = (
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${safeFileName(name)}-${exported.exportedAt.slice(0, 10)}${suffix}.json`;
+  const date = includeDate ? `-${exported.exportedAt.slice(0, 10)}` : "";
+  anchor.download = `${safeFileName(name)}${date}${suffix}.json`;
   document.body.append(anchor);
   anchor.click();
   anchor.remove();

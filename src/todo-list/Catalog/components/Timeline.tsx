@@ -6,9 +6,12 @@ import type {
 } from "../../../types/catalog.js";
 import { useCatalogActions } from "../context.js";
 import { buildTimeline } from "../model/timeline.js";
+import { useCatalogBridge } from "../../bridge/context.js";
 
 export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
   const { setCompletion } = useCatalogActions();
+  const catalogBridge = useCatalogBridge();
+  const readOnly = catalogBridge.enabled;
 
   const toggleCompletion = (
     event: MouseEvent<HTMLElement>,
@@ -16,6 +19,7 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
     completed: boolean,
   ): void => {
     event.preventDefault();
+    if (readOnly) return;
     void setCompletion(id, !completed).catch(console.error);
   };
 
@@ -24,6 +28,7 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
     target: CatalogRecordTarget,
   ): void => {
     event.preventDefault();
+    if (readOnly) return;
     onEdit(target);
   };
 
@@ -37,7 +42,11 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
   };
 
   return (
-    <section className="timeline-panel" aria-label="作品时间轴">
+    <section
+      className="timeline-panel"
+      aria-label="作品时间轴"
+      data-server-controlled={readOnly}
+    >
       <div className="timeline-grid" style={gridStyle}>
         <div className="timeline-axis timeline-row">
           <div className="timeline-corner" aria-hidden="true" />
@@ -59,13 +68,14 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
             <figure
               className="work-cover"
               data-completed={work.completed}
+              aria-disabled={readOnly}
               onDoubleClick={(event) =>
                 toggleCompletion(event, work.id, work.completed)
               }
               onContextMenu={(event) =>
                 editRecord(event, { storeName: "works", id: work.id })
               }
-              title="双击切换完成状态，右键编辑"
+              title={readOnly ? "服务端控制中" : "双击切换完成状态，右键编辑"}
             >
               {work.coverUrl ? (
                 <img src={work.coverUrl} alt={`${work.title}封面`} />
@@ -127,6 +137,7 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
                                     <span
                                       className="timeline-item"
                                       data-completed={item.completed}
+                                      aria-disabled={readOnly}
                                       key={item.key}
                                       onDoubleClick={(event) =>
                                         toggleCompletion(
@@ -138,7 +149,11 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
                                       onContextMenu={(event) =>
                                         editRecord(event, item.target)
                                       }
-                                      title={`${item.title} ${item.subtitle} · 双击切换完成状态，右键编辑`}
+                                      title={
+                                        readOnly
+                                          ? `${item.title} ${item.subtitle} · 服务端控制中`
+                                          : `${item.title} ${item.subtitle} · 双击切换完成状态，右键编辑`
+                                      }
                                     >
                                       <span className="timeline-item-heading">
                                         <strong>{item.title}</strong>

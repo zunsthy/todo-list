@@ -153,6 +153,7 @@ export interface CatalogTimelineProps {
 export interface CatalogEditorProps {
   works: readonly CatalogWork[];
   snapshot: CatalogSnapshot;
+  ready: boolean;
   editing: CatalogRecordTarget | null;
   onEditingChange: SetEditingCatalogRecord;
 }
@@ -178,6 +179,7 @@ export interface EpisodeFormProps extends CatalogFormCallbacks {
 
 export interface DataTransferProps {
   snapshot: CatalogSnapshot;
+  readOnly?: boolean;
 }
 
 export interface EditorTriggerProps {

@@ -34,6 +34,10 @@ Start the development server:
 npm run dev
 ```
 
+To let a local tool operate the catalog in the current browser page, start with
+`npm run dev:bridge` and enable server control in the data manager. See
+[docs/catalog-bridge.md](docs/catalog-bridge.md) for the RPC protocol.
+
 The server renders `src/index.mustache` for each page request. `tsc` watches the
 TypeScript sources and emits browser-native ES modules, which the server exposes
 with the CSS and web worker under `/assets`.

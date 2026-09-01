@@ -10,12 +10,16 @@ export const sourceStylesDirectory = path.join(projectDirectory, "src/styles");
 
 const templatePath = path.join(projectDirectory, "src/index.mustache");
 
-export const renderPage = async (development: boolean): Promise<string> => {
+export const renderPage = async (
+  development: boolean,
+  catalogBridge = false,
+): Promise<string> => {
   const template = await readFile(templatePath, "utf8");
   const options = development ? "?dev&target=es2022" : "?target=es2022";
 
   return Mustache.render(template, {
     title: "Todo-list",
+    catalogBridge: catalogBridge ? { path: "/__catalog/ws" } : false,
     assets: {
       stylesheet: "/assets/styles/index.css",
       script: "/assets/todo-list.js",

@@ -7,9 +7,14 @@ import {
   sourceStylesDirectory,
 } from "./build-config.ts";
 import { resolveStaticFile } from "./safe-path.ts";
+import {
+  createCatalogBridgeServer,
+  type CatalogBridgeServer,
+} from "./catalog-bridge/server.ts";
 
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
+const catalogBridgeEnabled = process.argv.includes("--catalog-bridge");
 
 const assetsDirectory = path.join(developmentDirectory, "assets");
 
@@ -38,7 +43,12 @@ const sendPage = async (
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> => {
-  send(request, response, "text/html; charset=utf-8", await renderPage(true));
+  send(
+    request,
+    response,
+    "text/html; charset=utf-8",
+    await renderPage(true, catalogBridgeEnabled),
+  );
 };
 
 const sendAsset = async (
@@ -86,8 +96,11 @@ const sendAsset = async (
   }
 };
 
+let catalogBridge: CatalogBridgeServer | null = null;
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+
+  if (catalogBridge?.handleHttp(request, response, pathname)) return;
 
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.writeHead(405, { allow: "GET, HEAD" }).end();
@@ -115,17 +128,21 @@ const server = http.createServer((request, response) => {
   });
 });
 
+if (catalogBridgeEnabled) catalogBridge = createCatalogBridgeServer(server);
+
 await new Promise<void>((resolve, reject) => {
   server.once("error", reject);
   server.listen(port, host, resolve);
 });
 
 console.log(`Development server: http://${host}:${port}`);
+if (catalogBridge) console.log("Catalog bridge: enabled");
 
 let shuttingDown = false;
 const shutdown = (): void => {
   if (shuttingDown) return;
   shuttingDown = true;
+  catalogBridge?.close();
   server.close();
 };
 

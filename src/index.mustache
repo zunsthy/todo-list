@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {{#catalogBridge}}
+    <meta name="todo-list-catalog-bridge" content="{{{path}}}" />
+    {{/catalogBridge}}
     <title>{{title}}</title>
     <link rel="stylesheet" href="{{{assets.stylesheet}}}" />
     <script type="importmap">
