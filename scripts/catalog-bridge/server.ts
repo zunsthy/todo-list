@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server as HttpServer } from "node:http";
 import { WebSocketServer } from "ws";
-import { catalogBridgePath } from "../../src/todo-list/bridge/protocol.ts";
+import { catalogBridgePath } from "../../src/pages/works/bridge/protocol.ts";
 import { CatalogBridgeBroker } from "./broker.ts";
 import { handleCatalogBridgeHttp } from "./http.ts";
 

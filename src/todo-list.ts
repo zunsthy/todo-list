@@ -1,4 +1,4 @@
-import { app } from "./todo-list/app.js";
+import { app } from "./app/app.js";
 
 const rootElement = document.getElementById("app-root");
 

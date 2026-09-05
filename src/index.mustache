@@ -8,6 +8,9 @@
     {{/catalogBridge}}
     <title>{{title}}</title>
     <link rel="stylesheet" href="{{{assets.stylesheet}}}" />
+    {{#pageStylesheet}}
+    <link rel="stylesheet" href="{{{pageStylesheet}}}" />
+    {{/pageStylesheet}}
     <script type="importmap">
       {
         "imports": {
@@ -19,7 +22,7 @@
     </script>
   </head>
   <body>
-    <main id="app-root"></main>
+    <div id="app-root"></div>
     <script type="module" src="{{{assets.script}}}"></script>
   </body>
 </html>

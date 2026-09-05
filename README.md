@@ -1,6 +1,15 @@
 # Todo-list
 
-一个使用 IndexedDB 保存数据，标记作品观看与阅读进度的时间轴。
+一个使用 IndexedDB 保存个人数据的可视化应用。
+
+- `/`：可视化模块入口。
+- `/works`：作品发行与观看、阅读进度时间轴。
+
+旅行足迹的数据结构、按需地区树和后续实现步骤见
+[docs/travel-footprints.md](docs/travel-footprints.md)，目前仅完成设计。
+
+作品页面仍使用同一来源下原有的 `todo` 数据库；迁移到 `/works` 无需重新导入数据。
+`/works/`、`/works/index.html` 和旧地址 `/todo-list.html` 也可以打开作品页面。
 
 ## Data model
 
@@ -34,16 +43,29 @@ Start the development server:
 npm run dev
 ```
 
+Open `http://127.0.0.1:8080/` for the module list or
+`http://127.0.0.1:8080/works` for the works timeline.
+
 To let a local tool operate the catalog in the current browser page, start with
 `npm run dev:bridge` and enable server control in the data manager. See
 [docs/catalog-bridge.md](docs/catalog-bridge.md) for the RPC protocol.
 
-The server renders `src/index.mustache` for each page request. `tsc` watches the
+The browser, development server, and production build share the page definitions
+in `src/app/pages.ts`. The server renders `src/index.mustache` for each page request. `tsc` watches the
 TypeScript sources and emits browser-native ES modules, which the server exposes
 with the CSS and web worker under `/assets`.
 
-Styles are split by responsibility under `src/styles`; `index.css` is the only
-HTML entry and orders the files with native cascade layers.
+Shared styles live under `src/styles`; works-specific styles live under
+`src/pages/works/styles` and are loaded only on the works page. Both CSS entries
+order their files with native cascade layers.
+
+Application navigation and routing live under `src/app`, while `src/pages/works`
+owns the catalog UI, data types, database, worker, and catalog bridge handlers.
+Reusable form helpers, JSON downloads, error serialization, and the floating
+data-manager button live under `src/shared`. The home page does not initialize
+the catalog worker or database. Leaving the works page closes its worker and
+bridge connection; returning through browser history restores them and reloads
+the catalog, including when the browser restores a cached page.
 
 React's bare module imports are resolved by the import map in the rendered page.
 It uses version-pinned modules from `esm.sh`, so the browser needs network access
@@ -54,6 +76,11 @@ Create a production build in `dist`:
 ```bash
 npm run build
 ```
+
+The build emits `dist/index.html`, `dist/works/index.html`, and the compatible
+`dist/todo-list.html` entry. Serve `dist` at the origin root with a static server
+that supports directory index files; `/works/` works without an SPA fallback.
+Browser assets and the catalog bridge use paths relative to the origin root.
 
 Run the type checker, unit tests, and production build together:
 

@@ -1,7 +1,4 @@
 :root {
-  --cover-width: 7.245rem;
-  --quarter-width: 11rem;
-  --year-width: 44rem;
   color: #222;
   font:
     13px/1.4 system-ui,
@@ -48,4 +45,11 @@ textarea:disabled {
 .page {
   min-width: 100%;
   padding: 0.25rem;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 2rem;
+  color: #666;
+  text-align: center;
 }

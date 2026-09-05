@@ -2,12 +2,12 @@ import type {
   CatalogBridgePageInfo,
   CatalogBridgeRpcRequest,
   CatalogBridgeRpcResponse,
-} from "../../src/types/catalog-bridge.ts";
+} from "../../src/pages/works/types/catalog-bridge.ts";
 import {
   catalogBridgeProtocol,
   parseCatalogBridgePageMessage,
   parseJsonMessage,
-} from "../../src/todo-list/bridge/protocol.ts";
+} from "../../src/pages/works/bridge/protocol.ts";
 import type { RawData, WebSocket } from "ws";
 
 interface PendingRequest {

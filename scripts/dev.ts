@@ -4,13 +4,14 @@ import path from "node:path";
 import {
   developmentDirectory,
   renderPage,
-  sourceStylesDirectory,
+  sourceDirectory,
 } from "./build-config.ts";
 import { resolveStaticFile } from "./safe-path.ts";
 import {
   createCatalogBridgeServer,
   type CatalogBridgeServer,
 } from "./catalog-bridge/server.ts";
+import { findPage, type PageId } from "../src/app/pages.ts";
 
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
@@ -18,7 +19,6 @@ const catalogBridgeEnabled = process.argv.includes("--catalog-bridge");
 
 const assetsDirectory = path.join(developmentDirectory, "assets");
 
-const pagePaths = new Set(["/", "/index.html", "/todo-list.html"]);
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
@@ -42,12 +42,13 @@ const send = (
 const sendPage = async (
   request: IncomingMessage,
   response: ServerResponse,
+  pageId: PageId,
 ): Promise<void> => {
   send(
     request,
     response,
     "text/html; charset=utf-8",
-    await renderPage(true, catalogBridgeEnabled),
+    await renderPage(true, catalogBridgeEnabled, pageId),
   );
 };
 
@@ -57,18 +58,10 @@ const sendAsset = async (
   pathname: string,
 ): Promise<void> => {
   const requestedPath = pathname.slice("/assets/".length);
-  const stylesPrefix = "styles/";
-  const isStyle =
-    requestedPath.startsWith(stylesPrefix) &&
-    path.extname(requestedPath) === ".css";
-  const filePath = isStyle
-    ? await resolveStaticFile(
-        sourceStylesDirectory,
-        requestedPath.slice(stylesPrefix.length),
-      )
-    : requestedPath.startsWith(stylesPrefix)
-      ? null
-      : await resolveStaticFile(assetsDirectory, requestedPath);
+  const filePath = await resolveStaticFile(
+    path.extname(requestedPath) === ".css" ? sourceDirectory : assetsDirectory,
+    requestedPath,
+  );
 
   if (!filePath) {
     response.writeHead(404).end();
@@ -108,8 +101,9 @@ const server = http.createServer((request, response) => {
   }
 
   let operation: Promise<void>;
-  if (pagePaths.has(pathname)) {
-    operation = sendPage(request, response);
+  const page = findPage(pathname);
+  if (page) {
+    operation = sendPage(request, response, page.id);
   } else if (pathname.startsWith("/assets/")) {
     operation = sendAsset(request, response, pathname);
   } else {
@@ -135,7 +129,10 @@ await new Promise<void>((resolve, reject) => {
   server.listen(port, host, resolve);
 });
 
-console.log(`Development server: http://${host}:${port}`);
+const address = server.address();
+console.log(
+  `Development server: http://${host}:${typeof address === "object" && address ? address.port : port}`,
+);
 if (catalogBridge) console.log("Catalog bridge: enabled");
 
 let shuttingDown = false;

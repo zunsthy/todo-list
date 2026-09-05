@@ -3,7 +3,7 @@ import { CatalogBridgeBroker, CatalogBridgeBrokerError } from "./broker.ts";
 import {
   parseCatalogBridgeRpcRequest,
   parseJsonMessage,
-} from "../../src/todo-list/bridge/protocol.ts";
+} from "../../src/pages/works/bridge/protocol.ts";
 
 const maxBodyBytes = 5 * 1024 * 1024;
 

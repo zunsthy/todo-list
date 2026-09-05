@@ -1,0 +1,73 @@
+.app-navigation {
+  position: sticky;
+  left: 0;
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.5rem 7rem 0.5rem 0.75rem;
+  border-bottom: 1px solid #ddd;
+  background: #fff;
+}
+
+.app-navigation a {
+  color: #555;
+  text-decoration: none;
+}
+
+.app-navigation a[aria-current="page"] {
+  color: #222;
+  font-weight: 600;
+}
+
+.app-navigation a:hover {
+  text-decoration: underline;
+}
+
+.home-page {
+  max-width: 60rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.home-page h1 {
+  margin-bottom: 0.5rem;
+  font-size: 1.8rem;
+}
+
+.home-page > p {
+  color: #666;
+}
+
+.module-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.module-card {
+  display: block;
+  padding: 1.25rem;
+  color: #222;
+  border: 1px solid #bbb;
+  text-decoration: none;
+}
+
+.module-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.module-card p {
+  color: #666;
+}
+
+a.module-card:hover {
+  border-color: #4f7cac;
+  background: #f6f9fc;
+}
+
+.module-card[data-planned="true"] {
+  border-style: dashed;
+  color: #666;
+}
