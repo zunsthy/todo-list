@@ -133,6 +133,16 @@ export const Editor = ({
                     编辑
                   </button>
                   <button
+                    aria-pressed={work.completed}
+                    disabled={readOnly}
+                    type="button"
+                    onClick={(event) =>
+                      toggleCompletion(event, work.id, work.completed)
+                    }
+                  >
+                    {work.completed ? "取消完成" : "完成"}
+                  </button>
+                  <button
                     type="button"
                     onClick={() =>
                       downloadCatalogWork(
@@ -182,6 +192,7 @@ export const Editor = ({
                     <div className="editor-record-heading">
                       <strong>
                         {publication.category} · {publication.title}
+                        {publication.subtitle && ` · ${publication.subtitle}`}
                         {publication.timelineGroup &&
                           ` · ${publication.timelineGroup}`}
                       </strong>
@@ -197,6 +208,20 @@ export const Editor = ({
                           }
                         >
                           编辑
+                        </button>
+                        <button
+                          aria-pressed={publication.completed}
+                          disabled={readOnly}
+                          type="button"
+                          onClick={(event) =>
+                            toggleCompletion(
+                              event,
+                              publication.id,
+                              publication.completed,
+                            )
+                          }
+                        >
+                          {publication.completed ? "取消完成" : "完成"}
                         </button>
                         <button
                           className="delete-action"
@@ -270,6 +295,20 @@ export const Editor = ({
                                   }
                                 >
                                   编辑
+                                </button>
+                                <button
+                                  aria-pressed={episode.completed}
+                                  disabled={readOnly}
+                                  type="button"
+                                  onClick={(event) =>
+                                    toggleCompletion(
+                                      event,
+                                      episode.id,
+                                      episode.completed,
+                                    )
+                                  }
+                                >
+                                  {episode.completed ? "取消完成" : "完成"}
                                 </button>
                                 <button
                                   className="delete-action"
