@@ -1,7 +1,7 @@
 import type { SubmitEvent } from "react";
 import type { Episode, EpisodeFormProps } from "../../../types/catalog.js";
 import { formValue } from "../../utils/form.js";
-import { useCatalogActions } from "../context.js";
+import { useRecordSave } from "./useRecordSave.js";
 
 export const EpisodeForm = ({
   publicationId,
@@ -9,7 +9,7 @@ export const EpisodeForm = ({
   onCancel,
   onSaved,
 }: EpisodeFormProps) => {
-  const { addRecord, updateRecord } = useCatalogActions();
+  const { save, saving, error } = useRecordSave(Boolean(episode), onSaved);
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -23,22 +23,21 @@ export const EpisodeForm = ({
       date: formValue(formData, "date"),
     };
 
-    const save = episode ? updateRecord : addRecord;
-    void save({ storeName: "episodes", dataList: [record] })
-      .then(() => {
-        if (!episode) form.reset();
-        onSaved?.();
-      })
-      .catch(console.error);
+    save(form, { storeName: "episodes", dataList: [record] });
   };
 
   return (
-    <form className="catalog-form episode-form" onSubmit={handleSubmit}>
+    <form
+      className="catalog-form episode-form"
+      onSubmit={handleSubmit}
+      aria-busy={saving}
+    >
       <h5>{episode ? "编辑集" : "添加集"}</h5>
       <label>
         <span>集数</span>
         <input
           defaultValue={episode?.number}
+          disabled={saving}
           name="number"
           placeholder="01 / EX"
           required
@@ -46,16 +45,33 @@ export const EpisodeForm = ({
       </label>
       <label>
         <span>名称</span>
-        <input defaultValue={episode?.title} name="title" required />
+        <input
+          defaultValue={episode?.title}
+          name="title"
+          required
+          disabled={saving}
+        />
       </label>
       <label>
         <span>时间</span>
-        <input defaultValue={episode?.date} name="date" type="date" />
+        <input
+          defaultValue={episode?.date}
+          name="date"
+          type="date"
+          disabled={saving}
+        />
       </label>
+      {error && (
+        <p className="form-error" role="alert">
+          保存失败：{error}
+        </p>
+      )}
       <div className="form-actions">
-        <button type="submit">{episode ? "保存" : "添加集"}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? "正在保存…" : episode ? "保存" : "添加集"}
+        </button>
         {episode && (
-          <button type="button" onClick={onCancel}>
+          <button type="button" onClick={onCancel} disabled={saving}>
             取消
           </button>
         )}

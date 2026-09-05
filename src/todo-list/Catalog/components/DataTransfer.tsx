@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type {
   CatalogImportData,
   CatalogImportScope,
@@ -20,14 +20,19 @@ export const DataTransfer = ({
   const [parentId, setParentId] = useState("");
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
+  const importingRef = useRef(false);
+  const [importing, setImporting] = useState(false);
+  const disabled = readOnly || importing;
 
   const handleImport = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    if (readOnly) return;
+    if (readOnly || importingRef.current) return;
     const form = event.currentTarget;
     const input = form.elements.namedItem("file");
     if (!(input instanceof HTMLInputElement) || !input.files?.[0]) return;
     const files = [...input.files];
+    importingRef.current = true;
+    setImporting(true);
     setFailed(false);
     setMessage(`正在检查 ${files.length} 个文件…`);
 
@@ -69,6 +74,9 @@ export const DataTransfer = ({
       } catch (error: unknown) {
         setFailed(true);
         setMessage(error instanceof Error ? error.message : String(error));
+      } finally {
+        importingRef.current = false;
+        setImporting(false);
       }
     })();
   };
@@ -98,11 +106,11 @@ export const DataTransfer = ({
         <section>
           <h3>导入</h3>
           <div>
-            <form onSubmit={handleImport}>
+            <form onSubmit={handleImport} aria-busy={importing}>
               <label>
                 <span>导入范围</span>
                 <select
-                  disabled={readOnly}
+                  disabled={disabled}
                   name="scope"
                   value={scope}
                   onChange={(event) => {
@@ -121,7 +129,7 @@ export const DataTransfer = ({
                 <label>
                   <span>外部数据所属作品</span>
                   <select
-                    disabled={readOnly}
+                    disabled={disabled}
                     value={parentId}
                     onChange={(event) => setParentId(event.currentTarget.value)}
                   >
@@ -138,7 +146,7 @@ export const DataTransfer = ({
                 <label>
                   <span>外部数据所属出版物</span>
                   <select
-                    disabled={readOnly}
+                    disabled={disabled}
                     value={parentId}
                     onChange={(event) => setParentId(event.currentTarget.value)}
                   >
@@ -155,15 +163,15 @@ export const DataTransfer = ({
                 <span>JSON 文件（可多选）</span>
                 <input
                   accept="application/json,.json"
-                  disabled={readOnly}
+                  disabled={disabled}
                   multiple
                   name="file"
                   required
                   type="file"
                 />
               </label>
-              <button disabled={readOnly} type="submit">
-                导入
+              <button disabled={disabled} type="submit">
+                {importing ? "正在导入…" : "导入"}
               </button>
               <small>
                 Todo-list 备份保留 UUID；外部数据生成 UUID

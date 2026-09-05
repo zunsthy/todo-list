@@ -6,12 +6,9 @@ import type {
   CatalogSnapshot,
   CatalogStoreName,
   CompletionMapping,
-  Episode,
-  Publication,
-  Work,
 } from "../../types/catalog.js";
 import type { DatabaseCallback, LegacyTodoItem } from "../../types/database.js";
-import { migrateLegacyItems } from "./migrate.js";
+import { migrateLegacyItems } from "./migrate.ts";
 
 const log = console.log.bind(console, "%c[IDB]", "color: aqua");
 const version = 4;
@@ -136,18 +133,39 @@ export const close = (): void => {
   database = null;
 };
 
-export const loadAll = (callback: DatabaseCallback<CatalogSnapshot>): void => {
-  if (!database) {
-    callback(new Error("The database is not open"));
-    return;
-  }
-
+const readCatalog = (
+  transaction: IDBTransaction,
+  onLoaded: (snapshot: CatalogSnapshot) => void,
+): void => {
   const result: CatalogSnapshot = {
     works: [],
     publications: [],
     episodes: [],
     completion: [],
   };
+  let remaining: number = storeNames.length;
+  const readStore = <Store extends CatalogStoreName>(
+    storeName: Store,
+  ): void => {
+    const request = transaction.objectStore(storeName).getAll();
+    request.addEventListener("success", () => {
+      result[storeName] = request.result as CatalogSnapshot[Store];
+      remaining -= 1;
+      // Continue synchronously inside the request event while the transaction
+      // is active, so a caller can safely enqueue writes after reading.
+      if (remaining === 0) onLoaded(result);
+    });
+  };
+  for (const storeName of storeNames) readStore(storeName);
+};
+
+export const loadAll = (callback: DatabaseCallback<CatalogSnapshot>): void => {
+  if (!database) {
+    callback(new Error("The database is not open"));
+    return;
+  }
+
+  let result: CatalogSnapshot | undefined;
   const transaction = database.transaction([...storeNames], "readonly");
   let settled = false;
 
@@ -165,21 +183,8 @@ export const loadAll = (callback: DatabaseCallback<CatalogSnapshot>): void => {
   });
   transaction.addEventListener("complete", () => finish(null));
 
-  const works = transaction.objectStore("works").getAll();
-  const publications = transaction.objectStore("publications").getAll();
-  const episodes = transaction.objectStore("episodes").getAll();
-  const completion = transaction.objectStore("completion").getAll();
-  works.addEventListener("success", () => {
-    result.works = works.result as Work[];
-  });
-  publications.addEventListener("success", () => {
-    result.publications = publications.result as Publication[];
-  });
-  episodes.addEventListener("success", () => {
-    result.episodes = episodes.result as Episode[];
-  });
-  completion.addEventListener("success", () => {
-    result.completion = completion.result as CompletionMapping[];
+  readCatalog(transaction, (snapshot) => {
+    result = snapshot;
   });
 };
 
@@ -372,9 +377,12 @@ export const importData = (
   for (const record of data.completion ?? []) completion.put(record);
 };
 
-export const replaceCatalog = (
-  snapshot: CatalogSnapshot,
-  callback: DatabaseCallback,
+export const mutateCatalog = <Result>(
+  transform: (snapshot: CatalogSnapshot) => {
+    snapshot: CatalogSnapshot;
+    result: Result;
+  },
+  callback: DatabaseCallback<Result>,
 ): void => {
   if (!database) {
     callback(new Error("The database is not open"));
@@ -382,34 +390,39 @@ export const replaceCatalog = (
   }
 
   const transaction = database.transaction([...storeNames], "readwrite");
-  let settled = false;
-  const finish = (error: Error | null): void => {
-    if (settled) return;
-    settled = true;
-    callback(error);
-  };
-  transaction.addEventListener("error", () => {
-    finish(requestError(transaction.error, "Unable to replace catalog data"));
-  });
+  let result: Result | undefined;
+  let transformError: Error | null = null;
   transaction.addEventListener("abort", () => {
-    finish(
-      requestError(transaction.error, "Replacing catalog data was aborted"),
+    callback(
+      transformError ??
+        requestError(transaction.error, "Updating catalog data was aborted"),
     );
   });
-  transaction.addEventListener("complete", () => finish(null));
+  transaction.addEventListener("complete", () => callback(null, result));
 
-  for (const storeName of storeNames)
-    transaction.objectStore(storeName).clear();
-  for (const record of snapshot.works) {
-    transaction.objectStore("works").put(record);
-  }
-  for (const record of snapshot.publications) {
-    transaction.objectStore("publications").put(record);
-  }
-  for (const record of snapshot.episodes) {
-    transaction.objectStore("episodes").put(record);
-  }
-  for (const record of snapshot.completion) {
-    transaction.objectStore("completion").put(record);
-  }
+  readCatalog(transaction, (current) => {
+    try {
+      // The transform must be synchronous and preserve unchanged record
+      // references. Read and write under the same lock to prevent lost updates,
+      // including requests from other connections to this database.
+      const next = transform(current);
+      result = next.result;
+      for (const storeName of storeNames) {
+        if (current[storeName] === next.snapshot[storeName]) continue;
+        const store = transaction.objectStore(storeName);
+        const previous = new Map<string, { id: string }>(
+          current[storeName].map((record) => [record.id, record]),
+        );
+        for (const record of next.snapshot[storeName]) {
+          if (previous.get(record.id) !== record) store.put(record);
+          previous.delete(record.id);
+        }
+        for (const id of previous.keys()) store.delete(id);
+      }
+    } catch (error: unknown) {
+      transformError =
+        error instanceof Error ? error : new Error(String(error));
+      transaction.abort();
+    }
+  });
 };

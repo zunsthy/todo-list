@@ -11,7 +11,7 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
-    "test": "node --test src/todo-list/Catalog/model/catalog.test.ts src/todo-list/Catalog/model/timeline.test.ts src/todo-list/Catalog/model/transfer.test.ts src/todo-list/bridge/catalog.test.ts src/todo-list/db/migrate.test.ts scripts/catalog-bridge/server.test.ts",
+    "test": "node --test src/todo-list/Catalog/model/catalog.test.ts src/todo-list/Catalog/model/timeline.test.ts src/todo-list/Catalog/model/transfer.test.ts src/todo-list/bridge/catalog.test.ts src/todo-list/bridge/router.test.ts src/todo-list/db/migrate.test.ts scripts/catalog-bridge/server.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build"
@@ -44,6 +44,7 @@
     "@types/react-dom": "^19",
     "@types/ws": "^8.18.1",
     "concurrently": "^10",
+    "fake-indexeddb": "^6.2.5",
     "mustache": "^4",
     "prettier": "^3",
     "typescript": "^7"

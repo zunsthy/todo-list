@@ -146,12 +146,13 @@ export interface CatalogActions {
 }
 
 export interface CatalogTimelineProps {
-  works: readonly CatalogWork[];
+  timeline: CatalogTimelineModel;
   onEdit: EditCatalogRecord;
 }
 
 export interface CatalogEditorProps {
   works: readonly CatalogWork[];
+  timeline: CatalogTimelineModel;
   snapshot: CatalogSnapshot;
   ready: boolean;
   editing: CatalogRecordTarget | null;

@@ -150,6 +150,15 @@ export class CatalogBridgeBroker {
         ),
       );
     }
+    if (page.pending.has(request.id)) {
+      return Promise.reject(
+        new CatalogBridgeBrokerError(
+          "DUPLICATE_REQUEST_ID",
+          `请求 id 正在处理中：${request.id}；请为每次调用使用新的 id`,
+          409,
+        ),
+      );
+    }
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         if (!page.pending.delete(request.id)) return;

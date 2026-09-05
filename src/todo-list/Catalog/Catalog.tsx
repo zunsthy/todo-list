@@ -22,6 +22,7 @@ import {
   removeCatalogRecord,
   updateCatalogRecord,
 } from "./model/catalog.js";
+import { buildTimeline } from "./model/timeline.js";
 
 const emptyCatalog = (): CatalogSnapshot => ({
   works: [],
@@ -145,6 +146,11 @@ export const Catalog = () => {
   }, [catalogBridge.enabled]);
 
   const works = useMemo(() => buildCatalog(snapshot), [snapshot]);
+  const currentYear = new Date().getFullYear();
+  const timeline = useMemo(
+    () => buildTimeline(works, currentYear),
+    [works, currentYear],
+  );
   const actions = useMemo<CatalogActions>(
     () => ({
       addRecord,
@@ -175,9 +181,10 @@ export const Catalog = () => {
         onEditingChange={setEditing}
         ready={ready}
         snapshot={snapshot}
+        timeline={timeline}
         works={works}
       />
-      <Timeline onEdit={setEditing} works={works} />
+      <Timeline onEdit={setEditing} timeline={timeline} />
     </CatalogActionsContext.Provider>
   );
 };

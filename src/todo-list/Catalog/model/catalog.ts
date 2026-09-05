@@ -10,8 +10,7 @@ import type {
   Publication,
 } from "../../../types/catalog.js";
 
-const compareText = (left: string, right: string): number =>
-  left.localeCompare(right, "zh-CN", { numeric: true });
+const compareText = new Intl.Collator("zh-CN", { numeric: true }).compare;
 
 const comparePublications = (left: Publication, right: Publication): number =>
   compareText(left.date || "9999", right.date || "9999") ||
@@ -26,16 +25,15 @@ export const buildCatalog = (snapshot: CatalogSnapshot): CatalogWork[] => {
     snapshot.completion.map(({ id, completed }) => [id, completed]),
   );
   const episodes = new Map<string, CatalogPublication["episodes"]>();
-  for (const episode of [...snapshot.episodes].sort(compareEpisodes)) {
+  for (const episode of snapshot.episodes) {
     const list = episodes.get(episode.publicationId) ?? [];
     list.push({ ...episode, completed: completion.get(episode.id) ?? false });
     episodes.set(episode.publicationId, list);
   }
+  for (const list of episodes.values()) list.sort(compareEpisodes);
 
   const publications = new Map<string, CatalogPublication[]>();
-  for (const publication of [...snapshot.publications].sort(
-    comparePublications,
-  )) {
+  for (const publication of snapshot.publications) {
     const list = publications.get(publication.workId) ?? [];
     list.push({
       ...publication,
@@ -44,6 +42,7 @@ export const buildCatalog = (snapshot: CatalogSnapshot): CatalogWork[] => {
     });
     publications.set(publication.workId, list);
   }
+  for (const list of publications.values()) list.sort(comparePublications);
 
   return [...snapshot.works]
     .sort((left, right) => compareText(left.title, right.title))

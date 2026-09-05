@@ -1,14 +1,13 @@
-import type { MouseEvent } from "react";
+import { memo, type MouseEvent } from "react";
 import type {
   CatalogRecordTarget,
   CatalogTimelineProps,
   TimelineStyle,
 } from "../../../types/catalog.js";
 import { useCatalogActions } from "../context.js";
-import { buildTimeline } from "../model/timeline.js";
 import { useCatalogBridge } from "../../bridge/context.js";
 
-export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
+export const Timeline = memo(({ timeline, onEdit }: CatalogTimelineProps) => {
   const { setCompletion } = useCatalogActions();
   const catalogBridge = useCatalogBridge();
   const readOnly = catalogBridge.enabled;
@@ -32,11 +31,10 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
     onEdit(target);
   };
 
-  if (works.length === 0) {
+  if (timeline.works.length === 0) {
     return <p className="empty-state">还没有作品，请先在数据管理中添加。</p>;
   }
 
-  const timeline = buildTimeline(works);
   const gridStyle: TimelineStyle = {
     "--quarter-count": timeline.quarterCount,
   };
@@ -78,7 +76,12 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
               title={readOnly ? "服务端控制中" : "双击切换完成状态，右键编辑"}
             >
               {work.coverUrl ? (
-                <img src={work.coverUrl} alt={`${work.title}封面`} />
+                <img
+                  src={work.coverUrl}
+                  alt={`${work.title}封面`}
+                  loading="lazy"
+                  decoding="async"
+                />
               ) : (
                 <div className="cover-placeholder" aria-hidden="true">
                   {work.title.slice(0, 2)}
@@ -186,4 +189,4 @@ export const Timeline = ({ works, onEdit }: CatalogTimelineProps) => {
       </div>
     </section>
   );
-};
+});

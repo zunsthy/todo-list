@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import http from "node:http";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import WebSocket from "ws";
 import {
   createCatalogBridgeServer,
@@ -25,7 +25,7 @@ const waitForMessage = (socket: WebSocket): Promise<unknown> =>
     socket.once("error", reject);
   });
 
-test("catalog bridge brokers RPC requests to a registered page", async (t) => {
+const registeredPage = async (t: TestContext) => {
   let bridge: CatalogBridgeServer | null = null;
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
@@ -52,7 +52,11 @@ test("catalog bridge brokers RPC requests to a registered page", async (t) => {
   const readyMessage = waitForMessage(socket);
   socket.send(JSON.stringify({ type: "register", protocol: 1, pageId }));
   assert.deepEqual(await readyMessage, { type: "ready", protocol: 1, pageId });
+  return { baseUrl, pageId, socket };
+};
 
+test("catalog bridge brokers RPC requests to a registered page", async (t) => {
+  const { baseUrl, pageId, socket } = await registeredPage(t);
   const pagesResponse = await fetch(`${baseUrl}/__catalog/pages`);
   assert.equal(pagesResponse.status, 200);
   const pages = (await pagesResponse.json()) as {
@@ -93,3 +97,46 @@ test("catalog bridge brokers RPC requests to a registered page", async (t) => {
     result: { works: [] },
   });
 });
+
+test(
+  "catalog bridge rejects a duplicate pending ID without losing the original response",
+  { timeout: 5_000 },
+  async (t) => {
+    const { baseUrl, pageId, socket } = await registeredPage(t);
+    const call = () =>
+      fetch(`${baseUrl}/__catalog/pages/${pageId}/rpc`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "same-id",
+          method: "catalog.snapshot",
+          params: {},
+        }),
+      });
+    const pageRequest = waitForMessage(socket);
+    const original = call();
+    await pageRequest;
+    const duplicate = await call();
+    assert.equal(duplicate.status, 409);
+    assert.equal(
+      ((await duplicate.json()) as { error: { code: string } }).error.code,
+      "DUPLICATE_REQUEST_ID",
+    );
+    socket.send(
+      JSON.stringify({
+        type: "response",
+        id: "same-id",
+        ok: true,
+        result: "original",
+      }),
+    );
+    const response = await original;
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      type: "response",
+      id: "same-id",
+      ok: true,
+      result: "original",
+    });
+  },
+);

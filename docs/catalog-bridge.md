@@ -48,7 +48,8 @@ POST /__catalog/pages/:pageId/rpc
 Content-Type: application/json
 ```
 
-请求中的 `id` 由调用方生成并用于关联响应，`params` 始终是对象：
+请求中的 `id` 由调用方生成并用于关联响应，每次调用应使用新的 `id`，`params` 始终是对象。
+同一页面已有相同 `id` 的请求尚未完成时，新请求会返回 HTTP 409，原请求继续处理：
 
 ```json
 {
@@ -204,6 +205,10 @@ Content-Type: application/json
 操作按数组顺序执行，支持 `create`、`update`、`delete`、`setCompletion`。结果是与操作顺序
 一致的数组；任一操作失败时不会写入数据库。批量创建父子数据时，应预先生成 UUID。
 
+写请求在同一个 IndexedDB 读写事务内读取、校验并保存，仅写入变化的记录和删除目标。
+并发写请求会由数据库依次处理，后续请求读取前一次提交后的数据；同一实体的不同字段
+修改可以同时保留，同一字段的修改以最后提交的值为准。
+
 ## 错误与重试
 
 常见错误码：
@@ -211,6 +216,7 @@ Content-Type: application/json
 - `INVALID_REQUEST`：请求字段或数据关系无效。
 - `NOT_FOUND`：实体或父级不存在。
 - `ALREADY_EXISTS`：创建时 UUID 已存在。
+- `DUPLICATE_REQUEST_ID`：同一页面存在尚未完成的同 ID 请求，返回 HTTP 409。
 - `PAGE_NOT_CONNECTED`：页面没有连接。
 - `PAGE_DISCONNECTED`：请求期间页面断开。
 - `PAGE_TIMEOUT`：页面处理超时。

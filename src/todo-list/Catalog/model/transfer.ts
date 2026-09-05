@@ -514,12 +514,10 @@ const assertEntityIdsDoNotCollide = (
   }
 
   if (!snapshot) return;
-  for (const [id, importedStore] of locations) {
-    for (const storeName of stores) {
-      if (
-        storeName !== importedStore &&
-        snapshot[storeName].some((record) => record.id === id)
-      ) {
+  for (const storeName of stores) {
+    for (const { id } of snapshot[storeName]) {
+      const importedStore = locations.get(id);
+      if (importedStore && storeName !== importedStore) {
         invalid(`id ${id} 已用于 ${storeName}，不能导入到 ${importedStore}`);
       }
     }
@@ -620,6 +618,12 @@ export const createCatalogWorkExport = (
   const selected = selectCatalogWork(snapshot, workId);
   const work = selected.works[0];
   if (!work) throw new Error(`找不到要导出的作品：${workId}`);
+  const episodesByPublication = new Map<string, Episode[]>();
+  for (const episode of selected.episodes) {
+    const episodes = episodesByPublication.get(episode.publicationId) ?? [];
+    episodes.push(episode);
+    episodesByPublication.set(episode.publicationId, episodes);
+  }
 
   return {
     format: "todo-list-catalog-work",
@@ -630,9 +634,7 @@ export const createCatalogWorkExport = (
         ...work,
         publications: selected.publications.map((publication) => ({
           ...publication,
-          episodes: selected.episodes.filter(
-            ({ publicationId }) => publicationId === publication.id,
-          ),
+          episodes: episodesByPublication.get(publication.id) ?? [],
         })),
       },
       completion: selected.completion,

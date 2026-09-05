@@ -95,6 +95,20 @@ const works: CatalogWork[] = [
   },
 ];
 
+test("buildTimeline keeps reversed date ranges out of the grid", () => {
+  const publication = {
+    ...works[0]!.publications[0]!,
+    date: "2024-10-01",
+    endDate: "2024-01-01",
+  };
+  const result = buildTimeline(
+    [{ ...works[0]!, publications: [publication] }],
+    2024,
+  );
+  assert.deepEqual(result.works[0]?.tracks, []);
+  assert.equal(result.works[0]?.undated[0]?.target.id, publication.id);
+});
+
 test("buildTimeline lays quarters out from the current year back to 2000", () => {
   const timeline = buildTimeline(works, 2024);
 

@@ -1,10 +1,10 @@
 import type { FormEvent } from "react";
 import type { Work, WorkFormProps } from "../../../types/catalog.js";
 import { formListValue, formValue } from "../../utils/form.js";
-import { useCatalogActions } from "../context.js";
+import { useRecordSave } from "./useRecordSave.js";
 
 export const WorkForm = ({ work, onCancel, onSaved }: WorkFormProps) => {
-  const { addRecord, updateRecord } = useCatalogActions();
+  const { save, saving, error } = useRecordSave(Boolean(work), onSaved);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -19,26 +19,30 @@ export const WorkForm = ({ work, onCancel, onSaved }: WorkFormProps) => {
       otherInfo: formValue(formData, "otherInfo"),
     };
 
-    const save = work ? updateRecord : addRecord;
-    void save({ storeName: "works", dataList: [record] })
-      .then(() => {
-        if (!work) form.reset();
-        onSaved?.();
-      })
-      .catch(console.error);
+    save(form, { storeName: "works", dataList: [record] });
   };
 
   return (
-    <form className="catalog-form work-form" onSubmit={handleSubmit}>
+    <form
+      className="catalog-form work-form"
+      onSubmit={handleSubmit}
+      aria-busy={saving}
+    >
       <h3>{work ? "编辑作品" : "添加作品"}</h3>
       <label>
         <span>作品名</span>
-        <input defaultValue={work?.title} name="title" required />
+        <input
+          defaultValue={work?.title}
+          name="title"
+          required
+          disabled={saving}
+        />
       </label>
       <label>
         <span>封面地址</span>
         <input
           defaultValue={work?.coverUrl}
+          disabled={saving}
           name="coverUrl"
           type="url"
           placeholder="https://…"
@@ -48,6 +52,7 @@ export const WorkForm = ({ work, onCancel, onSaved }: WorkFormProps) => {
         <span>别名</span>
         <input
           defaultValue={work?.aliases.join(", ")}
+          disabled={saving}
           name="aliases"
           placeholder="多个别名用逗号分隔"
         />
@@ -56,18 +61,31 @@ export const WorkForm = ({ work, onCancel, onSaved }: WorkFormProps) => {
         <span>作者</span>
         <input
           defaultValue={work?.authors.join(", ")}
+          disabled={saving}
           name="authors"
           placeholder="多个作者用逗号分隔"
         />
       </label>
       <label className="wide-field">
         <span>其他信息</span>
-        <textarea defaultValue={work?.otherInfo} name="otherInfo" rows={2} />
+        <textarea
+          defaultValue={work?.otherInfo}
+          name="otherInfo"
+          rows={2}
+          disabled={saving}
+        />
       </label>
+      {error && (
+        <p className="form-error" role="alert">
+          保存失败：{error}
+        </p>
+      )}
       <div className="form-actions">
-        <button type="submit">{work ? "保存" : "添加作品"}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? "正在保存…" : work ? "保存" : "添加作品"}
+        </button>
         {work && (
-          <button type="button" onClick={onCancel}>
+          <button type="button" onClick={onCancel} disabled={saving}>
             取消
           </button>
         )}

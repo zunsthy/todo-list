@@ -68,6 +68,53 @@ test("buildCatalog creates and sorts the three-level catalog", () => {
   );
 });
 
+test("buildCatalog sorts within each parent without mutating the snapshot", () => {
+  const data: CatalogSnapshot = {
+    ...snapshot,
+    publications: [
+      { ...snapshot.publications[0]!, id: "anime-2", title: "第2部", date: "" },
+      snapshot.publications[0]!,
+    ],
+    episodes: [
+      {
+        ...snapshot.episodes[0]!,
+        id: "second-10",
+        publicationId: "anime-2",
+        number: "10",
+      },
+      ...snapshot.episodes,
+      {
+        ...snapshot.episodes[0]!,
+        id: "second-2",
+        publicationId: "anime-2",
+        number: "2",
+      },
+      {
+        ...snapshot.episodes[0]!,
+        id: "second-2-earlier",
+        publicationId: "anime-2",
+        number: "2",
+        date: "2012-01-01",
+      },
+    ],
+  };
+  const before = structuredClone(data);
+  const publications = buildCatalog(data)[0]!.publications;
+  assert.deepEqual(
+    publications.map(({ id }) => id),
+    ["anime-1", "anime-2"],
+  );
+  assert.deepEqual(
+    publications[0]?.episodes.map(({ id }) => id),
+    ["episode-1", "episode-2"],
+  );
+  assert.deepEqual(
+    publications[1]?.episodes.map(({ id }) => id),
+    ["second-2-earlier", "second-2", "second-10"],
+  );
+  assert.deepEqual(data, before);
+});
+
 test("appendCatalogRecord appends records and completion mappings", () => {
   const result = appendCatalogRecord(snapshot, {
     storeName: "episodes",

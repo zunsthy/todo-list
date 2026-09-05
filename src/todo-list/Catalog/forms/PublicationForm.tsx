@@ -4,7 +4,7 @@ import type {
   PublicationFormProps,
 } from "../../../types/catalog.js";
 import { formValue } from "../../utils/form.js";
-import { useCatalogActions } from "../context.js";
+import { useRecordSave } from "./useRecordSave.js";
 
 export const PublicationForm = ({
   workId,
@@ -12,7 +12,7 @@ export const PublicationForm = ({
   onCancel,
   onSaved,
 }: PublicationFormProps) => {
-  const { addRecord, updateRecord } = useCatalogActions();
+  const { save, saving, error } = useRecordSave(Boolean(publication), onSaved);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -30,22 +30,21 @@ export const PublicationForm = ({
       isbn: formValue(formData, "isbn"),
     };
 
-    const save = publication ? updateRecord : addRecord;
-    void save({ storeName: "publications", dataList: [record] })
-      .then(() => {
-        if (!publication) form.reset();
-        onSaved?.();
-      })
-      .catch(console.error);
+    save(form, { storeName: "publications", dataList: [record] });
   };
 
   return (
-    <form className="catalog-form publication-form" onSubmit={handleSubmit}>
+    <form
+      className="catalog-form publication-form"
+      onSubmit={handleSubmit}
+      aria-busy={saving}
+    >
       <h4>{publication ? "编辑出版物" : "添加出版物"}</h4>
       <label>
         <span>类别</span>
         <input
           defaultValue={publication?.category}
+          disabled={saving}
           name="category"
           placeholder="小说 / 动画"
           required
@@ -55,34 +54,61 @@ export const PublicationForm = ({
         <span>系列轨道</span>
         <input
           defaultValue={publication?.timelineGroup}
+          disabled={saving}
           name="timelineGroup"
           placeholder="本篇 / 外传"
         />
       </label>
       <label>
         <span>书名 / 剧名</span>
-        <input defaultValue={publication?.title} name="title" required />
+        <input
+          defaultValue={publication?.title}
+          name="title"
+          required
+          disabled={saving}
+        />
       </label>
       <label>
         <span>子名称</span>
-        <input defaultValue={publication?.subtitle} name="subtitle" />
+        <input
+          defaultValue={publication?.subtitle}
+          name="subtitle"
+          disabled={saving}
+        />
       </label>
       <label>
         <span>开始时间</span>
-        <input defaultValue={publication?.date} name="date" type="date" />
+        <input
+          defaultValue={publication?.date}
+          name="date"
+          type="date"
+          disabled={saving}
+        />
       </label>
       <label>
         <span>结束时间</span>
-        <input defaultValue={publication?.endDate} name="endDate" type="date" />
+        <input
+          defaultValue={publication?.endDate}
+          name="endDate"
+          type="date"
+          disabled={saving}
+        />
       </label>
       <label>
         <span>ISBN</span>
-        <input defaultValue={publication?.isbn} name="isbn" />
+        <input defaultValue={publication?.isbn} name="isbn" disabled={saving} />
       </label>
+      {error && (
+        <p className="form-error" role="alert">
+          保存失败：{error}
+        </p>
+      )}
       <div className="form-actions">
-        <button type="submit">{publication ? "保存" : "添加出版物"}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? "正在保存…" : publication ? "保存" : "添加出版物"}
+        </button>
         {publication && (
-          <button type="button" onClick={onCancel}>
+          <button type="button" onClick={onCancel} disabled={saving}>
             取消
           </button>
         )}

@@ -294,6 +294,7 @@ export const buildTimeline = (
         if (
           start === null ||
           end === null ||
+          end < start ||
           start > newestQuarter ||
           end < oldestQuarter
         ) {

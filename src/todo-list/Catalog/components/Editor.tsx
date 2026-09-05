@@ -8,7 +8,6 @@ import { useCatalogActions } from "../context.js";
 import { EpisodeForm } from "../forms/EpisodeForm.js";
 import { PublicationForm } from "../forms/PublicationForm.js";
 import { WorkForm } from "../forms/WorkForm.js";
-import { buildTimeline } from "../model/timeline.js";
 import { downloadCatalogWork } from "../utils/download.js";
 import { DataTransfer } from "./DataTransfer.js";
 import { EditorTrigger } from "./EditorTrigger.js";
@@ -17,6 +16,7 @@ import { useCatalogBridge } from "../../bridge/context.js";
 
 export const Editor = ({
   works,
+  timeline,
   snapshot,
   ready,
   editing,
@@ -29,11 +29,11 @@ export const Editor = ({
   const undatedIds = useMemo(
     () =>
       new Set(
-        buildTimeline(works).works.flatMap(({ undated }) =>
+        timeline.works.flatMap(({ undated }) =>
           undated.map(({ target }) => target.id),
         ),
       ),
-    [works],
+    [timeline],
   );
 
   const isEditing = (storeName: CatalogEntityStoreName, id: string): boolean =>

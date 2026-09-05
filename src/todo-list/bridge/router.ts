@@ -1,11 +1,14 @@
-import type { CatalogBridgeRpcRequest } from "../../types/catalog-bridge.js";
+import type {
+  CatalogBridgeOperationResult,
+  CatalogBridgeRpcRequest,
+} from "../../types/catalog-bridge.js";
 import type { CatalogSnapshot } from "../../types/catalog.js";
-import * as database from "../db/index.js";
+import * as database from "../db/index.ts";
 import {
   applyCatalogBridgeOperations,
   findCatalogBridgeEntity,
-} from "./catalog.js";
-import { isObject } from "./protocol.js";
+} from "./catalog.ts";
+import { isObject } from "./protocol.ts";
 
 const loadSnapshot = (): Promise<CatalogSnapshot> =>
   new Promise((resolve, reject) => {
@@ -13,14 +16,6 @@ const loadSnapshot = (): Promise<CatalogSnapshot> =>
       if (error) reject(error);
       else if (snapshot) resolve(snapshot);
       else reject(new Error("The database returned no catalog data"));
-    });
-  });
-
-const replaceSnapshot = (snapshot: CatalogSnapshot): Promise<void> =>
-  new Promise((resolve, reject) => {
-    database.replaceCatalog(snapshot, (error) => {
-      if (error) reject(error);
-      else resolve();
     });
   });
 
@@ -33,29 +28,39 @@ const objectParams = (
 };
 
 const apply = async (
-  snapshot: CatalogSnapshot,
   operations: readonly unknown[],
   onChanged: () => void,
-) => {
-  const applied = applyCatalogBridgeOperations(snapshot, operations);
-  await replaceSnapshot(applied.snapshot);
+): Promise<CatalogBridgeOperationResult[]> => {
+  const results = await new Promise<CatalogBridgeOperationResult[]>(
+    (resolve, reject) => {
+      database.mutateCatalog(
+        (snapshot) => {
+          const applied = applyCatalogBridgeOperations(snapshot, operations);
+          return { snapshot: applied.snapshot, result: applied.results };
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else if (result) resolve(result);
+          else reject(new Error("The database returned no operation results"));
+        },
+      );
+    },
+  );
   onChanged();
-  return applied.results;
+  return results;
 };
 
 export const routeCatalogBridgeRequest = async (
   request: CatalogBridgeRpcRequest,
   onChanged: () => void,
 ): Promise<unknown> => {
-  const snapshot = await loadSnapshot();
   switch (request.method) {
     case "catalog.snapshot":
-      return snapshot;
+      return loadSnapshot();
     case "catalog.entity.get":
-      return findCatalogBridgeEntity(snapshot, request.params);
+      return findCatalogBridgeEntity(await loadSnapshot(), request.params);
     case "catalog.entity.create": {
       const result = await apply(
-        snapshot,
         [{ ...request.params, action: "create" }],
         onChanged,
       );
@@ -63,7 +68,6 @@ export const routeCatalogBridgeRequest = async (
     }
     case "catalog.entity.update": {
       const result = await apply(
-        snapshot,
         [{ ...request.params, action: "update" }],
         onChanged,
       );
@@ -71,7 +75,6 @@ export const routeCatalogBridgeRequest = async (
     }
     case "catalog.entity.delete": {
       const result = await apply(
-        snapshot,
         [{ ...request.params, action: "delete" }],
         onChanged,
       );
@@ -79,7 +82,6 @@ export const routeCatalogBridgeRequest = async (
     }
     case "catalog.completion.set": {
       const result = await apply(
-        snapshot,
         [{ ...request.params, action: "setCompletion" }],
         onChanged,
       );
@@ -90,7 +92,7 @@ export const routeCatalogBridgeRequest = async (
       if (!Array.isArray(params.operations)) {
         throw new Error("params.operations 必须是数组");
       }
-      return apply(snapshot, params.operations, onChanged);
+      return apply(params.operations, onChanged);
     }
   }
 };
