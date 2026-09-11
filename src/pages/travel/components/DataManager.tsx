@@ -13,6 +13,7 @@ export const DataManager = ({
   snapshot,
   selectedId,
   busy,
+  readOnly = false,
   onSelect,
   onEdit,
   onExport,
@@ -20,10 +21,12 @@ export const DataManager = ({
   snapshot: TravelSnapshot;
   selectedId: string | null;
   busy: boolean;
+  readOnly?: boolean;
   onSelect: (id: string) => void;
   onEdit: (editor: TravelEditor) => void;
   onExport: (regionId?: string) => void;
 }) => {
+  const writeDisabled = busy || readOnly;
   const tree = useMemo(() => buildTree(snapshot), [snapshot]);
   const [includeChildren, setIncludeChildren] = useState(true);
   const selected = selectedId ? tree.byId.get(selectedId) : undefined;
@@ -58,7 +61,7 @@ export const DataManager = ({
       <div className="travel-actions travel-manager-toolbar">
         <button
           type="button"
-          disabled={busy}
+          disabled={writeDisabled}
           onClick={() =>
             onEdit({ kind: "region", region: null, parentId: null })
           }
@@ -67,7 +70,7 @@ export const DataManager = ({
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={writeDisabled}
           onClick={() => onEdit({ kind: "import", parentId: null })}
         >
           导入备份
@@ -101,7 +104,7 @@ export const DataManager = ({
             <button
               type="button"
               className="primary"
-              disabled={busy || !tree.isLeaf(selected.id)}
+              disabled={writeDisabled || !tree.isLeaf(selected.id)}
               title={
                 tree.isLeaf(selected.id) ? undefined : "请选择叶节点添加足迹"
               }
@@ -117,7 +120,7 @@ export const DataManager = ({
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={writeDisabled}
               onClick={() =>
                 onEdit({ kind: "region", region: null, parentId: selected.id })
               }
@@ -126,14 +129,14 @@ export const DataManager = ({
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={writeDisabled}
               onClick={() => onEdit({ kind: "import", parentId: selected.id })}
             >
               导入下级
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={writeDisabled}
               onClick={() =>
                 onEdit({
                   kind: "region",
@@ -155,7 +158,7 @@ export const DataManager = ({
               type="button"
               className="danger"
               disabled={
-                busy ||
+                writeDisabled ||
                 !tree.isLeaf(selected.id) ||
                 snapshot.footprints.some(
                   (footprint) => footprint.regionId === selected.id,
@@ -198,7 +201,7 @@ export const DataManager = ({
                     <div className="travel-actions">
                       <button
                         type="button"
-                        disabled={busy}
+                        disabled={writeDisabled}
                         aria-label={`编辑足迹：${footprint.name}`}
                         onClick={() =>
                           onEdit({
@@ -213,7 +216,7 @@ export const DataManager = ({
                       <button
                         type="button"
                         className="danger"
-                        disabled={busy}
+                        disabled={writeDisabled}
                         aria-label={`删除足迹：${footprint.name}`}
                         onClick={() =>
                           onEdit({ kind: "delete-footprint", footprint })

@@ -7,15 +7,16 @@ import {
   sourceDirectory,
 } from "./build-config.ts";
 import { resolveStaticFile } from "./safe-path.ts";
-import {
-  createCatalogBridgeServer,
-  type CatalogBridgeServer,
-} from "./catalog-bridge/server.ts";
+import { createBridgeServer, type BridgeServer } from "./bridge/server.ts";
+import { parseCatalogBridgeRpcRequest } from "../src/pages/works/bridge/protocol.ts";
+import { parseTravelBridgeRpcRequest } from "../src/pages/travel/bridge/protocol.ts";
 import { findPage, type PageId } from "../src/app/pages.ts";
 
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "8080", 10);
-const catalogBridgeEnabled = process.argv.includes("--catalog-bridge");
+const catalogBridgeEnabled =
+  process.argv.includes("--catalog-bridge") ||
+  process.argv.includes("--bridge");
 
 const assetsDirectory = path.join(developmentDirectory, "assets");
 
@@ -89,7 +90,7 @@ const sendAsset = async (
   }
 };
 
-let catalogBridge: CatalogBridgeServer | null = null;
+let catalogBridge: BridgeServer | null = null;
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
 
@@ -122,7 +123,11 @@ const server = http.createServer((request, response) => {
   });
 });
 
-if (catalogBridgeEnabled) catalogBridge = createCatalogBridgeServer(server);
+if (catalogBridgeEnabled)
+  catalogBridge = createBridgeServer(server, [
+    { prefix: "/__catalog", parseRequest: parseCatalogBridgeRpcRequest },
+    { prefix: "/__travel", parseRequest: parseTravelBridgeRpcRequest },
+  ]);
 
 await new Promise<void>((resolve, reject) => {
   server.once("error", reject);
@@ -133,7 +138,7 @@ const address = server.address();
 console.log(
   `Development server: http://${host}:${typeof address === "object" && address ? address.port : port}`,
 );
-if (catalogBridge) console.log("Catalog bridge: enabled");
+if (catalogBridge) console.log("Data bridges: works + travel enabled");
 
 let shuttingDown = false;
 const shutdown = (): void => {

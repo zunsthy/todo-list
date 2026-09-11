@@ -6,7 +6,7 @@
 - `/works`：作品发行与观看、阅读进度时间轴。
 - `/travel`：地区树与足迹管理。
 
-足迹已实现树形界面；地图与足迹 bridge 尚未实现。
+足迹已实现树形界面与服务端数据桥；地图尚未实现。
 
 作品页面仍使用同一来源下原有的 `todo` 数据库；迁移到 `/works` 无需重新导入数据。
 `/works/`、`/works/index.html` 和旧地址 `/todo-list.html` 也可以打开作品页面。
@@ -55,6 +55,10 @@ IndexedDB 升级时迁移到对应层级并生成 UUID。第四个 `completion` 
 `TravelPage.tsx` 只负责页面组装与选择／筛选状态；`hooks/useTravelData.ts` 管理数据库生命周期，
 `Overview`、`RegionTree`、`DataManager` 和 `EditorPanel` 分别负责汇总、树展示、管理列表与编辑流程。
 
+使用 `npm run dev:bridge` 启动后，可在足迹“数据管理”中开启“允许服务端操作数据”。
+通过 `/__travel/pages` 发现页面，使用 `travel.*` 查询以及预览、提交写入。
+协议和调用示例见 [docs/travel-bridge.md](docs/travel-bridge.md)。
+
 ## Usage
 
 Use Node.js 22.18 or newer and install the dependencies:
@@ -76,6 +80,7 @@ Open `http://127.0.0.1:8080/` for the module list or
 To let a local tool operate the catalog in the current browser page, start with
 `npm run dev:bridge` and enable server control in the data manager. See
 [docs/catalog-bridge.md](docs/catalog-bridge.md) for the RPC protocol.
+The same command also enables the independent footprints bridge on `/travel`.
 
 The browser, development server, and production build share the page definitions
 in `src/app/pages.ts`. The server renders `src/index.mustache` for each page request. `tsc` watches the
@@ -91,7 +96,8 @@ owns the catalog UI, data types, database, worker, and catalog bridge handlers.
 Reusable form helpers, JSON downloads, error serialization, and the floating
 data-manager button and modal dialog live under `src/shared`. Travel owns its UI,
 validation and asynchronous IndexedDB access under `src/pages/travel`; it does not
-start the works worker. The home page does not initialize either database.
+start the works worker. Bridge transport and control components live under `src/shared/bridge`,
+with module-isolated forwarding in `scripts/bridge`. The home page does not initialize either database.
 Leaving the works page closes its worker and
 bridge connection; returning through browser history restores them and reloads
 the catalog, including when the browser restores a cached page.

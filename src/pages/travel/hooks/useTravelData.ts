@@ -6,6 +6,10 @@ import { emptySnapshot } from "../model.ts";
 export const useTravelData = () => {
   const database = useRef<TravelDatabase | null>(null);
   const loadSequence = useRef(0);
+  const writeBlocked = useRef(false);
+  const setWriteBlocked = useCallback((value: boolean) => {
+    writeBlocked.current = value;
+  }, []);
   const [snapshot, setSnapshot] = useState(emptySnapshot);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -82,7 +86,10 @@ export const useTravelData = () => {
   const run = async (
     operation: (handle: TravelDatabase) => Promise<unknown>,
     success: string,
+    write = true,
   ) => {
+    if (write && writeBlocked.current)
+      throw new Error("服务端控制已开启，请先关闭连接再编辑");
     const handle = database.current;
     if (!handle) throw new Error("数据库尚未就绪，请刷新页面");
     setBusy(true);
@@ -105,6 +112,8 @@ export const useTravelData = () => {
     clearFeedback,
     reportError,
     run,
+    refresh,
+    setWriteBlocked,
   };
 };
 

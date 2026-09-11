@@ -2,3 +2,4 @@
 @import url("./app.css") layer(app);
 @import url("./editor-trigger.css") layer(controls);
 @import url("./modal.css") layer(controls);
+@import url("./bridge.css") layer(controls);

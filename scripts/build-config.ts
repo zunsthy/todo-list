@@ -41,6 +41,8 @@ export const renderPage = async (
     title: page.title,
     catalogBridge:
       catalogBridge && page.id === "works" ? { path: "/__catalog/ws" } : false,
+    travelBridge:
+      catalogBridge && page.id === "travel" ? { path: "/__travel/ws" } : false,
     pageStylesheet: page.stylesheet,
     assets: {
       stylesheet: "/assets/styles/index.css",

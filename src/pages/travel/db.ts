@@ -1,5 +1,4 @@
 import {
-  buildTree,
   chinaRegion,
   exportData,
   parseFootprint,
@@ -16,6 +15,15 @@ import type {
   TravelData,
   TravelSnapshot,
 } from "./types.ts";
+import {
+  mutationBaseline,
+  mutationBoundarySelection,
+  planTravelMutations,
+  prepareTravelOperations,
+  TravelMutationError,
+  type TravelMutationPlan,
+  type TravelMutationPreview,
+} from "./mutations.ts";
 
 const stores = ["regions", "footprints", "regionBoundaries"] as const;
 interface ReadState {
@@ -79,7 +87,7 @@ const createDatabase = (database: IDBDatabase) => {
   // leaf checks and import conflict checks. Never await inside a transaction.
   const transact = <T>(
     mode: IDBTransactionMode,
-    includeBoundaries: boolean,
+    includeBoundaries: boolean | string[],
     operation: (state: ReadState, transaction: IDBTransaction) => T,
   ): Promise<T> =>
     new Promise((resolve, reject) => {
@@ -93,7 +101,8 @@ const createDatabase = (database: IDBDatabase) => {
         boundaryKeys: new Set(),
         boundaries: [],
       };
-      let remaining = 3,
+      let remaining =
+          3 + (Array.isArray(includeBoundaries) ? includeBoundaries.length : 0),
         result: T,
         error: unknown;
       transaction.onabort = () =>
@@ -124,11 +133,12 @@ const createDatabase = (database: IDBDatabase) => {
         state.snapshot.footprints = footprints.result as Footprint[];
         loaded();
       };
-      const boundaries = includeBoundaries
-        ? transaction.objectStore("regionBoundaries").getAll()
-        : transaction.objectStore("regionBoundaries").getAllKeys();
+      const boundaries =
+        includeBoundaries === true
+          ? transaction.objectStore("regionBoundaries").getAll()
+          : transaction.objectStore("regionBoundaries").getAllKeys();
       boundaries.onsuccess = () => {
-        if (includeBoundaries) {
+        if (includeBoundaries === true) {
           state.boundaries = boundaries.result as RegionBoundary[];
           state.boundaryKeys = new Set(
             state.boundaries.map((boundary) => boundary.key),
@@ -136,6 +146,16 @@ const createDatabase = (database: IDBDatabase) => {
         } else state.boundaryKeys = new Set(boundaries.result as string[]);
         loaded();
       };
+      if (Array.isArray(includeBoundaries)) {
+        for (const key of includeBoundaries) {
+          const request = transaction.objectStore("regionBoundaries").get(key);
+          request.onsuccess = () => {
+            if (request.result)
+              state.boundaries.push(request.result as RegionBoundary);
+            loaded();
+          };
+        }
+      }
     });
   const completeData = (state: ReadState): TravelData => ({
     ...state.snapshot,
@@ -147,8 +167,34 @@ const createDatabase = (database: IDBDatabase) => {
     label: string,
   ) => {
     if (!same(current ?? null, previous))
-      throw new Error(`${label}已被其他操作修改，请关闭编辑器并重新打开`);
+      throw new TravelMutationError(
+        "CONFLICT",
+        `${label}已被其他操作修改，请关闭编辑器并重新打开`,
+      );
   };
+  const savePlan = (plan: TravelMutationPlan, transaction: IDBTransaction) => {
+    for (const change of plan.changes) {
+      const store = transaction.objectStore(change.store);
+      if (change.after) store.put(change.after);
+      else store.delete(change.id);
+    }
+    return plan;
+  };
+  const write = (
+    operations: Record<string, unknown>[],
+    check: (state: ReadState) => void,
+  ) =>
+    transact(
+      "readwrite",
+      mutationBoundarySelection(operations),
+      (state, transaction) => {
+        check(state);
+        return savePlan(
+          planTravelMutations(state, operations, new Date().toISOString()),
+          transaction,
+        );
+      },
+    );
   return {
     close,
     subscribe(listener: () => void) {
@@ -178,113 +224,108 @@ const createDatabase = (database: IDBDatabase) => {
         transaction.onabort = () =>
           reject(transaction.error ?? new Error("无法读取边界"));
       }),
-    saveRegion: (value: Region, previous: Region | null) =>
-      transact(
-        "readwrite",
-        false,
-        ({ snapshot, boundaryKeys }, transaction) => {
-          const region = parseRegion(value),
-            old = snapshot.regions.find((item) => item.id === region.id);
-          assertCurrent(old, previous, "地区");
+    saveRegion: (value: Region, previous: Region | null) => {
+      const {
+        id,
+        parentId,
+        state: _state,
+        importedAt: _importedAt,
+        ...changes
+      } = value;
+      return write(
+        [
+          previous
+            ? { action: "region.update", id, changes }
+            : { action: "region.create", data: { id, parentId, ...changes } },
+        ],
+        ({ snapshot }) => {
+          parseRegion(value);
+          assertCurrent(
+            snapshot.regions.find((item) => item.id === id),
+            previous,
+            "地区",
+          );
           if (
             previous &&
-            (previous.id !== region.id || previous.parentId !== region.parentId)
+            (previous.id !== id || previous.parentId !== parentId)
           )
             throw new Error("普通编辑不能修改地区编码或父级");
-          const next = {
-            ...snapshot,
-            regions: snapshot.regions.filter((item) => item.id !== region.id),
-          };
-          const saved = previous
-            ? {
-                ...region,
-                state: previous.state,
-                ...(previous.importedAt
-                  ? { importedAt: previous.importedAt }
-                  : {}),
-              }
-            : { ...region, state: "unloaded" as const };
-          if (!previous) delete saved.importedAt;
-          next.regions.push(saved);
-          let parent: Region | undefined;
-          if (!previous && region.parentId !== null) {
-            const current = next.regions.find(
-              (item) => item.id === region.parentId,
-            );
-            if (!current) throw new Error("父地区不存在");
-            parent = { ...current, state: "partial" };
-            next.regions = next.regions.map((item) =>
-              item.id === parent!.id ? parent! : item,
-            );
-          }
-          validateSnapshot(next, boundaryKeys);
-          const store = transaction.objectStore("regions");
-          store.put(saved);
-          if (parent) store.put(parent);
         },
-      ),
+      );
+    },
     deleteRegion: (previous: Region) =>
-      transact("readwrite", false, ({ snapshot }, transaction) => {
+      write([{ action: "region.delete", id: previous.id }], ({ snapshot }) => {
         assertCurrent(
-          snapshot.regions.find((region) => region.id === previous.id),
+          snapshot.regions.find((item) => item.id === previous.id),
           previous,
           "地区",
         );
-        if (
-          snapshot.regions.some((region) => region.parentId === previous.id) ||
-          snapshot.footprints.some(
-            (footprint) => footprint.regionId === previous.id,
-          )
-        )
-          throw new Error("地区仍有下级或足迹引用，不能删除");
-        const store = transaction.objectStore("regions");
-        store.delete(previous.id);
-        const parent = snapshot.regions.find(
-          (region) => region.id === previous.parentId,
-        );
-        if (parent?.state === "complete")
-          store.put({ ...parent, state: "partial" });
       }),
-    saveFootprint: (value: Footprint, previous: Footprint | null) =>
-      transact(
-        "readwrite",
-        false,
-        ({ snapshot, boundaryKeys }, transaction) => {
-          const footprint = parseFootprint(value),
-            old = snapshot.footprints.find((item) => item.id === footprint.id);
-          assertCurrent(old, previous, "足迹");
-          if (previous && previous.id !== footprint.id)
-            throw new Error("不能修改足迹 ID");
-          if (
-            (!previous || previous.regionId !== footprint.regionId) &&
-            !buildTree(snapshot).isLeaf(footprint.regionId)
-          )
-            throw new Error("新建或更换地区时请选择没有本地下级的叶节点");
-          validateSnapshot(
-            {
-              ...snapshot,
-              footprints: [
-                ...snapshot.footprints.filter(
-                  (item) => item.id !== footprint.id,
-                ),
-                footprint,
-              ],
-            },
-            boundaryKeys,
+    saveFootprint: (value: Footprint, previous: Footprint | null) => {
+      const { id, ...changes } = value;
+      return write(
+        [
+          previous
+            ? { action: "footprint.update", id, changes }
+            : { action: "footprint.create", data: value },
+        ],
+        ({ snapshot }) => {
+          parseFootprint(value);
+          assertCurrent(
+            snapshot.footprints.find((item) => item.id === id),
+            previous,
+            "足迹",
           );
-          transaction.objectStore("footprints").put(footprint);
+          if (previous && previous.id !== id)
+            throw new Error("不能修改足迹 ID");
+        },
+      );
+    },
+    deleteFootprint: (previous: Footprint) =>
+      write(
+        [{ action: "footprint.delete", id: previous.id }],
+        ({ snapshot }) => {
+          assertCurrent(
+            snapshot.footprints.find((item) => item.id === previous.id),
+            previous,
+            "足迹",
+          );
         },
       ),
-    deleteFootprint: (previous: Footprint) =>
-      transact("readwrite", false, ({ snapshot }, transaction) => {
-        assertCurrent(
-          snapshot.footprints.find((footprint) => footprint.id === previous.id),
-          previous,
-          "足迹",
-        );
-        // Intentionally no region, state, or boundary writes here.
-        transaction.objectStore("footprints").delete(previous.id);
-      }),
+    previewMutations: async (
+      value: unknown,
+    ): Promise<TravelMutationPreview> => {
+      const operations = prepareTravelOperations(value);
+      return transact(
+        "readonly",
+        mutationBoundarySelection(operations),
+        (state) => {
+          const time = new Date().toISOString();
+          return {
+            operations,
+            time,
+            baseline: mutationBaseline(state),
+            plan: planTravelMutations(state, operations, time),
+          };
+        },
+      );
+    },
+    commitMutations: (preview: TravelMutationPreview) =>
+      transact(
+        "readwrite",
+        mutationBoundarySelection(preview.operations),
+        (state, transaction) => {
+          if (mutationBaseline(state) !== preview.baseline)
+            throw new TravelMutationError(
+              "CONFLICT",
+              "预览后数据发生变化，请重新预览",
+            );
+          return savePlan(
+            planTravelMutations(state, preview.operations, preview.time),
+            transaction,
+          );
+        },
+      ),
     previewImport: (
       source: unknown,
       parentId: string | null,

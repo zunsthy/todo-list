@@ -7,6 +7,8 @@ import { DataManager } from "./DataManager.js";
 import type { TravelEditor } from "./DataManager.js";
 import { FootprintForm, RegionForm } from "./Forms.js";
 import { ImportPanel } from "./ImportPanel.js";
+import { BridgeControl } from "../../../shared/bridge/Control.tsx";
+import type { TravelBridgeState } from "../bridge/useTravelBridge.ts";
 
 const editorTitle = (editor: TravelEditor): string => {
   switch (editor.kind) {
@@ -29,12 +31,14 @@ const editorTitle = (editor: TravelEditor): string => {
 
 export const EditorPanel = ({
   data,
+  bridge,
   selectedId,
   editor,
   onSelect,
   onEditorChange,
 }: {
   data: TravelDataState;
+  bridge: TravelBridgeState;
   selectedId: string | null;
   editor: TravelEditor | null;
   onSelect: (id: string) => void;
@@ -53,21 +57,26 @@ export const EditorPanel = ({
     data.clearFeedback();
   };
   const edit = (next: TravelEditor) => {
+    if (bridge.enabled) return;
     data.clearFeedback();
     onEditorChange(next);
   };
   const exportBackup = (regionId?: string) => {
-    void run(async (handle) => {
-      const result = await handle.export(regionId);
-      const name = regionId
-        ? (snapshot.regions.find((region) => region.id === regionId)?.name ??
-          regionId)
-        : "全部足迹";
-      downloadJson(
-        result,
-        `travel-${safeFileName(name)}-${new Date().toISOString().slice(0, 10)}.json`,
-      );
-    }, "备份已导出").catch(data.reportError);
+    void run(
+      async (handle) => {
+        const result = await handle.export(regionId);
+        const name = regionId
+          ? (snapshot.regions.find((region) => region.id === regionId)?.name ??
+            regionId)
+          : "全部足迹";
+        downloadJson(
+          result,
+          `travel-${safeFileName(name)}-${new Date().toISOString().slice(0, 10)}.json`,
+        );
+      },
+      "备份已导出",
+      false,
+    ).catch(data.reportError);
   };
   return (
     <>
@@ -95,6 +104,11 @@ export const EditorPanel = ({
                 </p>
               )}
               <div hidden={editor !== null}>
+                <BridgeControl
+                  bridge={bridge}
+                  ready={ready && !busy}
+                  onToggle={bridge.toggle}
+                />
                 {error && (
                   <p className="travel-error" role="alert">
                     {error}
@@ -104,6 +118,7 @@ export const EditorPanel = ({
                   snapshot={snapshot}
                   selectedId={selectedId}
                   busy={busy}
+                  readOnly={bridge.enabled}
                   onSelect={onSelect}
                   onEdit={edit}
                   onExport={exportBackup}

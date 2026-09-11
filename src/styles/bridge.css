@@ -1,0 +1,54 @@
+.data-bridge-banner {
+  position: sticky;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  align-items: center;
+  width: 100vw;
+  max-width: 100%;
+  padding: 0.35rem 0.5rem;
+  background: #f5f5f5;
+  border-bottom: 1px solid #aaa;
+}
+.data-bridge-banner[data-status="error"],
+.data-bridge-banner[data-status="reconnecting"] {
+  color: #8a1f1f;
+}
+.data-bridge-banner code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.data-bridge-banner button {
+  margin-left: auto;
+}
+.data-bridge-control {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #aaa;
+}
+.data-bridge-control > label {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-weight: 600;
+}
+.data-bridge-control > small {
+  color: #666;
+}
+.data-bridge-control p {
+  margin: 0.25rem 0 0;
+  color: #8a1f1f;
+}
+.data-bridge-page-id {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+.data-bridge-page-id code {
+  overflow-wrap: anywhere;
+}

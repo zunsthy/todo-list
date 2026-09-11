@@ -5,9 +5,12 @@ import type { TravelEditor } from "./components/DataManager.js";
 import { EditorPanel } from "./components/EditorPanel.js";
 import { Overview } from "./components/Overview.js";
 import { RegionTree } from "./components/RegionTree.js";
+import { useTravelBridge } from "./bridge/useTravelBridge.ts";
+import { BridgeBanner } from "../../shared/bridge/Control.tsx";
 
 export default function TravelPage() {
   const data = useTravelData();
+  const bridge = useTravelBridge(data);
   const { snapshot, ready, error } = data;
   const [selection, setSelection] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(new Set(["CN"]));
@@ -46,6 +49,7 @@ export default function TravelPage() {
 
   return (
     <main className="travel-page" aria-label="足迹">
+      <BridgeBanner bridge={bridge} />
       {error && !editor && (
         <p className="travel-error" role="alert">
           {error}{" "}
@@ -83,9 +87,11 @@ export default function TravelPage() {
               expanded={expanded}
               query={query}
               visitedOnly={visitedOnly}
+              readOnly={bridge.enabled}
               onSelect={select}
               onToggle={toggle}
               onEditFootprint={(footprint) => {
+                if (bridge.enabled) return;
                 data.clearFeedback();
                 select(footprint.regionId);
                 setEditor({
@@ -100,6 +106,7 @@ export default function TravelPage() {
       )}
       <EditorPanel
         data={data}
+        bridge={bridge}
         selectedId={selectedId}
         editor={editor}
         onSelect={select}

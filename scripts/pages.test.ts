@@ -44,6 +44,14 @@ test("only works pages load works styles and expose catalog bridge control", asy
   assert.match(travel, /<title>足迹 · Todo-list<\/title>/);
   assert.match(travel, /href="\/assets\/pages\/travel\/styles\/index.css"/);
   assert.doesNotMatch(travel, /todo-list-catalog-bridge|pages\/works\/styles/);
+  assert.match(
+    travel,
+    /name="todo-list-travel-bridge" content="\/__travel\/ws"/,
+  );
+  assert.doesNotMatch(
+    await renderPage(false, false, "travel"),
+    /todo-list-travel-bridge/,
+  );
 });
 
 test("static builds include a works directory entry and the legacy HTML entry", () => {

@@ -9,6 +9,7 @@ export const RegionTree = ({
   expanded,
   query,
   visitedOnly,
+  readOnly = false,
   onSelect,
   onToggle,
   onEditFootprint,
@@ -19,6 +20,7 @@ export const RegionTree = ({
   expanded: Set<string>;
   query: string;
   visitedOnly: boolean;
+  readOnly?: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
   onEditFootprint: (footprint: Footprint) => void;
@@ -83,6 +85,7 @@ export const RegionTree = ({
                 <button
                   type="button"
                   className="travel-tree-footprint"
+                  disabled={readOnly}
                   aria-haspopup="dialog"
                   aria-label={`编辑足迹：${footprint.name}`}
                   onClick={() => onEditFootprint(footprint)}

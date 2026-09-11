@@ -104,7 +104,7 @@ export const Editor = ({
           </form>
         </div>
 
-        <CatalogBridgeControl ready={ready} snapshot={snapshot} />
+        <CatalogBridgeControl ready={ready} />
         <DataTransfer readOnly={readOnly} snapshot={snapshot} />
         <details className="editor-create">
           <summary>
