@@ -84,7 +84,6 @@ export const Editor = ({
   return (
     <>
       <EditorTrigger
-        storageKey="todo-list:editor-trigger-position"
         onOpen={() => {
           onEditingChange(null);
           dialogRef.current?.showModal();

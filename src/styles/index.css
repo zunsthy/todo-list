@@ -1,3 +1,4 @@
 @import url("./base.css") layer(base);
 @import url("./app.css") layer(app);
 @import url("./editor-trigger.css") layer(controls);
+@import url("./modal.css") layer(controls);

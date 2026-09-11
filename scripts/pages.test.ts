@@ -20,24 +20,30 @@ test("page routes separate home, works, legacy links, and unknown paths", () => 
   ])
     assert.equal(findPage(pathname)?.id, "works");
   for (const pathname of [
-    "/travel",
+    "/travel/missing",
     "/works/missing",
     "/works-other",
     "/assets/todo-list.js",
   ])
     assert.equal(findPage(pathname), undefined);
+  for (const pathname of ["/travel", "/travel/", "/travel/index.html"])
+    assert.equal(findPage(pathname)?.id, "travel");
 });
 
 test("only works pages load works styles and expose catalog bridge control", async () => {
   const home = await renderPage(true, true, "home");
   const works = await renderPage(true, true, "works");
   const productionWorks = await renderPage(false, false, "works");
+  const travel = await renderPage(true, true, "travel");
   assert.doesNotMatch(home, /todo-list-catalog-bridge|pages\/works\/styles/);
   assert.match(works, /<title>作品 · Todo-list<\/title>/);
   assert.match(works, /content="\/__catalog\/ws"/);
   assert.match(works, /href="\/assets\/pages\/works\/styles\/index.css"/);
   assert.match(works, /src="\/assets\/todo-list.js"/);
   assert.doesNotMatch(productionWorks, /todo-list-catalog-bridge|\?dev/);
+  assert.match(travel, /<title>足迹 · Todo-list<\/title>/);
+  assert.match(travel, /href="\/assets\/pages\/travel\/styles\/index.css"/);
+  assert.doesNotMatch(travel, /todo-list-catalog-bridge|pages\/works\/styles/);
 });
 
 test("static builds include a works directory entry and the legacy HTML entry", () => {
@@ -46,6 +52,7 @@ test("static builds include a works directory entry and the legacy HTML entry", 
     "works/index.html",
     "todo-list.html",
   ]);
+  assert.deepEqual(pageOutputPaths(pages[2]), ["travel/index.html"]);
 });
 
 test(
@@ -95,11 +102,18 @@ test(
     }
     const home = await fetch(baseUrl);
     assert.doesNotMatch(await home.text(), /todo-list-catalog-bridge/);
+    for (const pathname of ["/travel", "/travel/", "/travel/index.html"]) {
+      const response = await fetch(`${baseUrl}${pathname}`);
+      assert.equal(response.status, 200);
+      assert.match(await response.text(), /足迹 · Todo-list/);
+    }
     for (const pathname of [
       "/assets/styles/index.css",
       "/assets/styles/editor-trigger.css",
       "/assets/pages/works/styles/index.css",
       "/assets/pages/works/styles/timeline.css",
+      "/assets/pages/travel/styles/index.css",
+      "/assets/styles/modal.css",
     ]) {
       const response = await fetch(`${baseUrl}${pathname}`);
       assert.equal(response.status, 200, pathname);
@@ -109,6 +123,7 @@ test(
     assert.equal(head.status, 200);
     assert.equal(await head.text(), "");
     assert.equal((await fetch(`${baseUrl}/works/missing`)).status, 404);
+    assert.equal((await fetch(`${baseUrl}/travel/missing`)).status, 404);
     assert.equal(
       (await fetch(`${baseUrl}/assets/pages/works/types/catalog.ts`)).status,
       404,

@@ -13,6 +13,13 @@ export const pages = [
     title: "作品 · Todo-list",
     stylesheet: "/assets/pages/works/styles/index.css",
   },
+  {
+    id: "travel",
+    path: "/travel",
+    aliases: ["/travel/", "/travel/index.html"],
+    title: "足迹 · Todo-list",
+    stylesheet: "/assets/pages/travel/styles/index.css",
+  },
 ] as const;
 
 export type PageId = (typeof pages)[number]["id"];

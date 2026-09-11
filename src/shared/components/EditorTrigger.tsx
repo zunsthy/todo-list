@@ -2,9 +2,10 @@ import { useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 
 interface EditorTriggerProps {
   onOpen: () => void;
-  storageKey: string;
   label?: string;
 }
+
+const positionStorageKey = "todo-list:editor-trigger-position";
 
 interface EditorTriggerPosition {
   x: number;
@@ -22,10 +23,10 @@ interface EditorTriggerDrag {
   moved: boolean;
 }
 
-const loadPosition = (storageKey: string): EditorTriggerPosition | null => {
+const loadPosition = (): EditorTriggerPosition | null => {
   try {
     const value: unknown = JSON.parse(
-      window.localStorage.getItem(storageKey) ?? "null",
+      window.localStorage.getItem(positionStorageKey) ?? "null",
     );
     if (
       typeof value === "object" &&
@@ -78,12 +79,9 @@ const applyPosition = (
   button.style.transform = `translate3d(${position.x - anchor.x}px, ${position.y - anchor.y}px, 0)`;
 };
 
-const savePosition = (
-  storageKey: string,
-  position: EditorTriggerPosition,
-): void => {
+const savePosition = (position: EditorTriggerPosition): void => {
   try {
-    window.localStorage.setItem(storageKey, JSON.stringify(position));
+    window.localStorage.setItem(positionStorageKey, JSON.stringify(position));
   } catch {
     // Dragging still works when storage is unavailable.
   }
@@ -91,14 +89,13 @@ const savePosition = (
 
 export const EditorTrigger = ({
   onOpen,
-  storageKey,
   label = "数据管理",
 }: EditorTriggerProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<EditorTriggerDrag | null>(null);
   const ignoreClickRef = useRef(false);
   const anchorRef = useRef<EditorTriggerPosition | null>(null);
-  const [initialPosition] = useState(() => loadPosition(storageKey));
+  const [initialPosition] = useState(loadPosition);
   const positionRef = useRef(initialPosition);
 
   const moveTo = (
@@ -124,13 +121,24 @@ export const EditorTrigger = ({
         button.offsetHeight,
       );
       moveTo(next, button);
-      savePosition(storageKey, next);
+      savePosition(next);
+    };
+
+    const restorePosition = (): void => {
+      const saved = loadPosition();
+      if (!saved) return;
+      positionRef.current = saved;
+      handleResize();
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [storageKey]);
+    window.addEventListener("pageshow", restorePosition);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("pageshow", restorePosition);
+    };
+  }, []);
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
     if (event.button !== 0) return;
@@ -177,8 +185,7 @@ export const EditorTrigger = ({
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     ignoreClickRef.current = suppressClick && drag.moved;
-    if (drag.moved && positionRef.current)
-      savePosition(storageKey, positionRef.current);
+    if (drag.moved && positionRef.current) savePosition(positionRef.current);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }

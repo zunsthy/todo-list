@@ -29,15 +29,6 @@
   padding: 0 1rem;
 }
 
-.home-page h1 {
-  margin-bottom: 0.5rem;
-  font-size: 1.8rem;
-}
-
-.home-page > p {
-  color: #666;
-}
-
 .module-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));

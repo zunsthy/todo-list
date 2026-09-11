@@ -4,6 +4,7 @@ import { HomePage } from "../pages/home/HomePage.js";
 import { findPage } from "./pages.js";
 
 const WorksPage = lazy(() => import("../pages/works/WorksPage.js"));
+const TravelPage = lazy(() => import("../pages/travel/TravelPage.js"));
 
 export const app = (element: HTMLElement): void => {
   const page = findPage(window.location.pathname);
@@ -19,6 +20,12 @@ export const app = (element: HTMLElement): void => {
         >
           作品
         </a>
+        <a
+          href="/travel"
+          aria-current={page?.id === "travel" ? "page" : undefined}
+        >
+          足迹
+        </a>
       </nav>
       <Suspense
         fallback={
@@ -29,6 +36,8 @@ export const app = (element: HTMLElement): void => {
       >
         {page?.id === "works" ? (
           <WorksPage />
+        ) : page?.id === "travel" ? (
+          <TravelPage />
         ) : page?.id === "home" ? (
           <HomePage />
         ) : (

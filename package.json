@@ -11,7 +11,7 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
-    "test": "node --test src/pages/works/catalog/model/catalog.test.ts src/pages/works/catalog/model/timeline.test.ts src/pages/works/catalog/model/transfer.test.ts src/pages/works/bridge/catalog.test.ts src/pages/works/bridge/router.test.ts src/pages/works/db/migrate.test.ts scripts/catalog-bridge/server.test.ts scripts/pages.test.ts",
+    "test": "node --test src/pages/works/catalog/model/catalog.test.ts src/pages/works/catalog/model/timeline.test.ts src/pages/works/catalog/model/transfer.test.ts src/pages/works/bridge/catalog.test.ts src/pages/works/bridge/router.test.ts src/pages/works/db/migrate.test.ts src/pages/travel/travel.test.ts scripts/catalog-bridge/server.test.ts scripts/pages.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run build"
