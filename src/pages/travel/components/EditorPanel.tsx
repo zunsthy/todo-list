@@ -46,6 +46,7 @@ export const EditorPanel = ({
 }) => {
   const [managerOpen, setManagerOpen] = useState(false);
   const { database, snapshot, busy, ready, error, message, run } = data;
+  const editingRegion = editor?.kind === "region" ? editor.region : null;
   const opened = managerOpen || editor !== null;
   const returnToManager = () => {
     setManagerOpen(true);
@@ -125,7 +126,7 @@ export const EditorPanel = ({
                 />
               </div>
               {editor && (
-                <div className="travel-editor-navigation">
+                <div className="travel-actions travel-editor-navigation">
                   <button
                     type="button"
                     disabled={busy}
@@ -133,6 +134,21 @@ export const EditorPanel = ({
                   >
                     ← 返回数据管理
                   </button>
+                  {editingRegion && (
+                    <button
+                      type="button"
+                      disabled={busy || bridge.enabled}
+                      onClick={() =>
+                        edit({
+                          kind: "footprint",
+                          footprint: null,
+                          regionId: editingRegion.id,
+                        })
+                      }
+                    >
+                      添加足迹
+                    </button>
+                  )}
                 </div>
               )}
               {editor?.kind === "region" && (

@@ -110,7 +110,7 @@ test(
           {
             action: "footprint.create",
             data: {
-              regionId: "110114",
+              regionId: "110000",
               name: "徒步",
               time: "2026-09",
               visitType: "户外",
@@ -128,7 +128,20 @@ test(
     const snapshot = await rpc<TravelSnapshot>("travel.snapshot");
     assert.equal(snapshot.regions.length, 3);
     assert.equal(snapshot.footprints.length, 1);
-    const footprint = snapshot.footprints[0]!;
+    assert.equal(snapshot.footprints[0]!.regionId, "110000");
+    const move = await rpc<{ previewId: string }>("travel.mutations.preview", {
+      operations: [
+        {
+          action: "footprint.update",
+          id: snapshot.footprints[0]!.id,
+          changes: { regionId: "CN" },
+        },
+      ],
+    });
+    await rpc("travel.mutations.commit", move);
+    const footprint = (await rpc<TravelSnapshot>("travel.snapshot"))
+      .footprints[0]!;
+    assert.equal(footprint.regionId, "CN");
     assert.equal(footprint.pos, null);
     const stale = await rpc("travel.mutations.preview", {
       operations: [

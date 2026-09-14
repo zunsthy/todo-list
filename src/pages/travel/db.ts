@@ -84,7 +84,7 @@ const createDatabase = (database: IDBDatabase) => {
   database.onversionchange = close;
 
   // Keep reads and writes in the same active IDB request callback, including
-  // leaf checks and import conflict checks. Never await inside a transaction.
+  // reference checks and import conflict checks. Never await inside a transaction.
   const transact = <T>(
     mode: IDBTransactionMode,
     includeBoundaries: boolean | string[],

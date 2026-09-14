@@ -90,6 +90,16 @@ export default function TravelPage() {
               readOnly={bridge.enabled}
               onSelect={select}
               onToggle={toggle}
+              onEditRegion={(region) => {
+                if (bridge.enabled) return;
+                data.clearFeedback();
+                select(region.id);
+                setEditor({
+                  kind: "region",
+                  region,
+                  parentId: region.parentId,
+                });
+              }}
               onEditFootprint={(footprint) => {
                 if (bridge.enabled) return;
                 data.clearFeedback();

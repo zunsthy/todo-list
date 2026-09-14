@@ -104,10 +104,7 @@ export const DataManager = ({
             <button
               type="button"
               className="primary"
-              disabled={writeDisabled || !tree.isLeaf(selected.id)}
-              title={
-                tree.isLeaf(selected.id) ? undefined : "请选择叶节点添加足迹"
-              }
+              disabled={writeDisabled}
               onClick={() =>
                 onEdit({
                   kind: "footprint",

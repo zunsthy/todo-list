@@ -295,18 +295,24 @@ test("manual child creation sets partial state without creating descendants", as
     undefined,
   );
 });
-test("old parent footprints survive drilling down and can still be edited", async (t) => {
+test("footprints can be created and moved to countries and non-leaf regions", async (t) => {
   const db = await database(t),
     original = footprint("CN");
   await db.saveFootprint(original, null);
   await importChildren(db, "CN", ["110000", "630000"]);
   await importChildren(db, "110000", ["110114"]);
   assert.deepEqual((await db.snapshot()).footprints, [original]);
-  await db.saveFootprint({ ...original, notes: "依然保留在中国" }, original);
-  await assert.rejects(
-    db.saveFootprint(footprint("CN", "new"), null),
-    /叶节点/,
+  const edited = { ...original, notes: "依然保留在中国" };
+  await db.saveFootprint(edited, original);
+  await db.saveFootprint(footprint("CN", "new-country"), null);
+  await db.saveFootprint(footprint("110000", "new-parent"), null);
+  const moved = { ...edited, regionId: "110000" };
+  await db.saveFootprint(moved, edited);
+  assert.deepEqual(
+    (await db.snapshot()).footprints.find((item) => item.id === original.id),
+    moved,
   );
+  assert.equal((await db.snapshot()).footprints.length, 3);
   assert.equal(
     (await db.snapshot()).regions.filter(
       (region) => region.parentId === "630000",
@@ -447,7 +453,7 @@ test("stale editors cannot overwrite or delete newer records", async (t) => {
     /已被其他操作修改/,
   );
 });
-test("leaf checks remain atomic when imports and footprint creation compete", async (t) => {
+test("footprint creation still succeeds when a region gains children concurrently", async (t) => {
   const db = await database(t),
     preview = await db.previewImport(children("CN", ["110000"]), "CN");
   const results = await Promise.allSettled([
@@ -455,8 +461,9 @@ test("leaf checks remain atomic when imports and footprint creation compete", as
     db.saveFootprint(footprint("CN"), null),
   ]);
   assert.equal(results[0]?.status, "fulfilled");
-  assert.equal(results[1]?.status, "rejected");
-  assert.equal((await db.snapshot()).footprints.length, 0);
+  assert.equal(results[1]?.status, "fulfilled");
+  assert.deepEqual((await db.snapshot()).footprints, [footprint("CN")]);
+  assert.equal((await db.snapshot()).regions.length, 2);
 });
 test("regions with children or footprints cannot be deleted", async (t) => {
   const db = await database(t);

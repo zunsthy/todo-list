@@ -1,5 +1,4 @@
 import {
-  buildTree,
   parseBoundary,
   parseFootprint,
   parseRegion,
@@ -201,14 +200,6 @@ export const planTravelMutations = (
           if (creating && data.footprints.some(({ id }) => id === saved.id))
             fail("ALREADY_EXISTS", `足迹已存在：${saved.id}`);
           region(saved.regionId);
-          if (
-            (!old || old.regionId !== saved.regionId) &&
-            !buildTree(data).isLeaf(saved.regionId)
-          )
-            fail(
-              "INVALID_REQUEST",
-              "新建或更换地区时请选择没有本地下级的叶节点",
-            );
           data.footprints = data.footprints.filter(
             (item) => item.id !== saved.id,
           );

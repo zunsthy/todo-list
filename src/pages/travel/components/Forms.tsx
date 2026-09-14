@@ -229,23 +229,19 @@ export const FootprintForm = ({
   const [regionId, setRegionId] = useState(
     footprint?.regionId ?? initialRegionId,
   );
-  const options = snapshot.regions
-    .filter(
-      (region) => tree.isLeaf(region.id) || footprint?.regionId === region.id,
-    )
-    .sort((a, b) =>
-      tree
-        .path(a.id)
-        .map((region) => region.name)
-        .join("/")
-        .localeCompare(
-          tree
-            .path(b.id)
-            .map((region) => region.name)
-            .join("/"),
-          "zh-CN",
-        ),
-    );
+  const options = [...snapshot.regions].sort((a, b) =>
+    tree
+      .path(a.id)
+      .map((region) => region.name)
+      .join("/")
+      .localeCompare(
+        tree
+          .path(b.id)
+          .map((region) => region.name)
+          .join("/"),
+        "zh-CN",
+      ),
+  );
   const { onSubmit, error } = useSubmit(async (form) =>
     onSave(
       parseFootprint({
@@ -287,7 +283,6 @@ export const FootprintForm = ({
                   .path(region.id)
                   .map((item) => item.name)
                   .join(" / ")}
-                {tree.isLeaf(region.id) ? "" : "（保留原地区）"}
               </option>
             ))}
           </select>

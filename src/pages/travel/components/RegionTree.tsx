@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type KeyboardEvent } from "react";
 import { buildRegionTreeView } from "./tree-view.ts";
 import type { Footprint, Region, TravelSnapshot } from "../types.ts";
 
@@ -12,6 +12,7 @@ export const RegionTree = ({
   readOnly = false,
   onSelect,
   onToggle,
+  onEditRegion,
   onEditFootprint,
 }: {
   snapshot: TravelSnapshot;
@@ -23,12 +24,23 @@ export const RegionTree = ({
   readOnly?: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
+  onEditRegion: (region: Region) => void;
   onEditFootprint: (footprint: Footprint) => void;
 }) => {
   const { tree, counts, visible, footprintsByRegion } = useMemo(
     () => buildRegionTreeView(snapshot, footprints, query, visitedOnly),
     [snapshot, footprints, query, visitedOnly],
   );
+  const editHandlers = (edit: () => void) => ({
+    onDoubleClick: readOnly ? undefined : edit,
+    onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === "F2" && !readOnly) {
+        event.preventDefault();
+        edit();
+      }
+    },
+    "aria-keyshortcuts": readOnly ? undefined : "F2",
+  });
   const renderRegion = (region: Region) => {
     const children = (tree.children.get(region.id) ?? []).filter((child) =>
       visible.has(child.id),
@@ -60,8 +72,10 @@ export const RegionTree = ({
           <button
             type="button"
             className="travel-tree-select"
+            title={readOnly ? "服务端控制中，编辑已禁用" : "双击编辑地区（F2）"}
             aria-current={selectedId === region.id ? "location" : undefined}
             onClick={() => onSelect(region.id)}
+            {...editHandlers(() => onEditRegion(region))}
           >
             <span className="travel-tree-name">
               {region.name}
@@ -88,7 +102,17 @@ export const RegionTree = ({
                   disabled={readOnly}
                   aria-haspopup="dialog"
                   aria-label={`编辑足迹：${footprint.name}`}
-                  onClick={() => onEditFootprint(footprint)}
+                  title={
+                    readOnly
+                      ? "服务端控制中，编辑已禁用"
+                      : "双击编辑足迹（Enter 或 F2）"
+                  }
+                  onClick={(event) => {
+                    if (event.detail === 0 && !readOnly)
+                      onEditFootprint(footprint);
+                    else onSelect(footprint.regionId);
+                  }}
+                  {...editHandlers(() => onEditFootprint(footprint))}
                 >
                   <span className="travel-tree-footprint-name">
                     {footprint.name}
