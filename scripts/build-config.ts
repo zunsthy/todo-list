@@ -52,6 +52,13 @@ export const renderPage = async (
       react: `https://esm.sh/react@19.2.8${options}`,
       reactJsxRuntime: `https://esm.sh/react@19.2.8/jsx-runtime${options}`,
       reactDomClient: `https://esm.sh/react-dom@19.2.8/client${options}`,
+      travelMap:
+        page.id === "travel"
+          ? {
+              d3: "https://esm.sh/d3@7.9.0?target=es2022",
+              hexgrid: "https://esm.sh/d3-hexgrid@0.3.0?target=es2022",
+            }
+          : false,
     },
   });
 };

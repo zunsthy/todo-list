@@ -1,3 +1,5 @@
+@import url("./map.css");
+
 @layer travel {
   .travel-page {
     min-width: 0;

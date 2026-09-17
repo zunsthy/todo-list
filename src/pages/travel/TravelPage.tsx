@@ -7,6 +7,8 @@ import { Overview } from "./components/Overview.js";
 import { RegionTree } from "./components/RegionTree.js";
 import { useTravelBridge } from "./bridge/useTravelBridge.ts";
 import { BridgeBanner } from "../../shared/bridge/Control.tsx";
+import { HexMapView } from "./components/HexMapView.js";
+import type { Region } from "./types.ts";
 
 export default function TravelPage() {
   const data = useTravelData();
@@ -18,6 +20,7 @@ export default function TravelPage() {
   const [year, setYear] = useState("");
   const [visitType, setVisitType] = useState("");
   const [visitedOnly, setVisitedOnly] = useState(false);
+  const [view, setView] = useState<"tree" | "map">("tree");
   const [editor, setEditor] = useState<TravelEditor | null>(null);
   const tree = useMemo(() => buildTree(snapshot), [snapshot]);
   const selectedId =
@@ -46,9 +49,15 @@ export default function TravelPage() {
       return next;
     });
   };
+  const editRegion = (region: Region) => {
+    if (bridge.enabled) return;
+    data.clearFeedback();
+    select(region.id);
+    setEditor({ kind: "region", region, parentId: region.parentId });
+  };
 
   return (
-    <main className="travel-page" aria-label="足迹">
+    <main className="travel-page" data-view={view} aria-label="足迹">
       <BridgeBanner bridge={bridge} />
       {error && !editor && (
         <p className="travel-error" role="alert">
@@ -78,40 +87,45 @@ export default function TravelPage() {
             onYearChange={setYear}
             onVisitTypeChange={setVisitType}
             onVisitedOnlyChange={setVisitedOnly}
+            view={view}
+            onViewChange={setView}
           />
-          <section className="travel-tree-panel" aria-label="地区与足迹">
-            <RegionTree
-              snapshot={snapshot}
-              footprints={footprints}
+          {view === "map" && data.database ? (
+            <HexMapView
+              database={data.database}
+              regions={snapshot.regions}
               selectedId={selectedId}
-              expanded={expanded}
               query={query}
-              visitedOnly={visitedOnly}
               readOnly={bridge.enabled}
               onSelect={select}
-              onToggle={toggle}
-              onEditRegion={(region) => {
-                if (bridge.enabled) return;
-                data.clearFeedback();
-                select(region.id);
-                setEditor({
-                  kind: "region",
-                  region,
-                  parentId: region.parentId,
-                });
-              }}
-              onEditFootprint={(footprint) => {
-                if (bridge.enabled) return;
-                data.clearFeedback();
-                select(footprint.regionId);
-                setEditor({
-                  kind: "footprint",
-                  footprint,
-                  regionId: footprint.regionId,
-                });
-              }}
+              onEdit={editRegion}
             />
-          </section>
+          ) : (
+            <section className="travel-tree-panel" aria-label="地区与足迹">
+              <RegionTree
+                snapshot={snapshot}
+                footprints={footprints}
+                selectedId={selectedId}
+                expanded={expanded}
+                query={query}
+                visitedOnly={visitedOnly}
+                readOnly={bridge.enabled}
+                onSelect={select}
+                onToggle={toggle}
+                onEditRegion={editRegion}
+                onEditFootprint={(footprint) => {
+                  if (bridge.enabled) return;
+                  data.clearFeedback();
+                  select(footprint.regionId);
+                  setEditor({
+                    kind: "footprint",
+                    footprint,
+                    regionId: footprint.regionId,
+                  });
+                }}
+              />
+            </section>
+          )}
         </>
       )}
       <EditorPanel
