@@ -291,8 +291,8 @@ export const FootprintForm = ({
           时间
           <input
             name="time"
-            defaultValue={footprint?.time ?? ""}
-            placeholder="YYYY、YYYY-MM 或 YYYY-MM-DD"
+            defaultValue={footprint?.time?.replace("T", " ") ?? ""}
+            placeholder="YYYY、YYYY-MM、YYYY-MM-DD 或 YYYY-MM-DD HH:mm"
           />
         </label>
         <label>
@@ -306,7 +306,7 @@ export const FootprintForm = ({
             ))}
           </select>
         </label>
-        <small>只记录一个时间；不记得时可以留空。</small>
+        <small>只记录一个当地时间，可精确到分钟；不记得时可以留空。</small>
         <label className="travel-form-full">
           说明
           <textarea name="notes" rows={4} defaultValue={footprint?.notes} />

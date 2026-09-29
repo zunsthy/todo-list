@@ -119,8 +119,10 @@ WS   /__travel/ws
 地区可省略字段默认：`parentId: null`、`aliases: []`、`classification: "administrative"`、
 `sortOrder: 0`、`notes: ""`、`pos: null`、`boundaryKey: null`。新地区初始为 `unloaded`。
 足迹可省略字段默认：`time: null`、`notes: ""`、`pos: null`，不自动复制地区坐标。
-`time` 支持 `YYYY`、`YYYY-MM`、`YYYY-MM-DD` 或 `null`；`visitType` 为旅游、户外、居住、
-工作、探亲、求学、中转中的一个。
+`time` 支持 `YYYY`、`YYYY-MM`、`YYYY-MM-DD`、`YYYY-MM-DDTHH:mm` 或 `null`；
+分钟精度也接受空格分隔的 `YYYY-MM-DD HH:mm`，保存时规范成 `T` 分隔。它表示当地时间，
+不自动推断时区或转换成 UTC；原有年／月／日记录保持原精度。
+`visitType` 为旅游、户外、居住、工作、办事、探亲、求学、中转中的一个。
 
 修改中未提供的字段保持不变。`pos` 只能整体替换或设为 `null`，例如：
 

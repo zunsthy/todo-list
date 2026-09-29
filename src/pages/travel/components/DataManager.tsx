@@ -189,7 +189,9 @@ export const DataManager = ({
                     <div>
                       <h4>{footprint.name}</h4>
                       <p>
-                        <time>{footprint.time ?? "时间未知"}</time>
+                        <time>
+                          {footprint.time?.replace("T", " ") ?? "时间未知"}
+                        </time>
                         <span className="travel-badge">
                           {footprint.visitType}
                         </span>

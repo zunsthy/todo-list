@@ -94,6 +94,7 @@ export default function TravelPage() {
             <HexMapView
               database={data.database}
               regions={snapshot.regions}
+              footprints={footprints}
               selectedId={selectedId}
               query={query}
               readOnly={bridge.enabled}

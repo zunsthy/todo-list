@@ -1,7 +1,7 @@
 import { geoMercator, geoPath, geoStream, type GeoStream } from "d3";
 import type { MultiPolygon } from "geojson";
-import type { RegionBoundary } from "../types.ts";
-import { mapGeometry } from "./coordinates.ts";
+import type { Pos, RegionBoundary } from "../types.ts";
+import { mapGeometry, toWgs84 } from "./coordinates.ts";
 import { simplifyRing, type Point, type RegionMetrics } from "./layout.ts";
 
 const projection = geoMercator()
@@ -9,6 +9,11 @@ const projection = geoMercator()
   .translate([1024, 1024])
   .precision(0.02);
 const planarPath = geoPath(null);
+
+export const projectPosition = (pos: Pos): Point | null => {
+  const point = projection(toWgs84(pos.coordinates, pos.coordinateSystem));
+  return point?.every(Number.isFinite) ? point : null;
+};
 
 export interface PreparedBoundary extends RegionMetrics {
   geometry: MultiPolygon;

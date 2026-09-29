@@ -117,7 +117,7 @@ export const RegionTree = ({
                   <span className="travel-tree-footprint-name">
                     {footprint.name}
                   </span>
-                  <time>{footprint.time ?? "时间未知"}</time>
+                  <time>{footprint.time?.replace("T", " ") ?? "时间未知"}</time>
                   <span className="travel-badge">{footprint.visitType}</span>
                 </button>
               </li>

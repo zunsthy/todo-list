@@ -1,7 +1,13 @@
 import { geoClipRectangle, geoIdentity, geoPath } from "d3";
 import { hexgrid, type HexLayout } from "d3-hexgrid";
 import type { GeometryCollection, MultiPolygon } from "geojson";
-import type { Region } from "../types.ts";
+import type { Footprint, Region } from "../types.ts";
+import { projectPosition } from "./geometry.ts";
+import {
+  footprintColor,
+  summarizeFootprints,
+  type FootprintStats,
+} from "./footprints.ts";
 import {
   HEX_RADIUS,
   bufferedViewport,
@@ -24,6 +30,15 @@ interface HitArea {
 interface PaintedShape extends MapShape, HitArea {
   cells: Path2D;
 }
+interface FootprintCell {
+  path: Path2D;
+  region: Region;
+  stats: FootprintStats;
+}
+export interface MapHit {
+  region: Region;
+  footprints: FootprintStats | null;
+}
 
 export class HexMapRenderer {
   private image = document.createElement("canvas");
@@ -31,6 +46,8 @@ export class HexMapRenderer {
   private hitAreas = new WeakMap<MultiPolygon, HitArea>();
   private grid: HexLayout | null = null;
   private owners = new Map<string, Region>();
+  private footprintCells = new Map<string, FootprintCell>();
+  private footprints: { footprint: Footprint; point: Point }[] = [];
   private radius = HEX_RADIUS;
   private shapes: PaintedShape[] = [];
   private camera: Camera = { x: 0, y: 0, k: 1 };
@@ -43,6 +60,15 @@ export class HexMapRenderer {
   private canvas: HTMLCanvasElement;
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
+  }
+
+  setFootprints(footprints: Footprint[]) {
+    this.footprints = footprints.flatMap((footprint) => {
+      const point = footprint.pos ? projectPosition(footprint.pos) : null;
+      return point ? [{ footprint, point }] : [];
+    });
+    // Filters only recolor the cached grid; they do not rebuild boundaries.
+    if (this.rendered) this.colorCells();
   }
 
   render(shapes: MapShape[], camera: Camera, size: Size) {
@@ -118,24 +144,77 @@ export class HexMapRenderer {
         }
       }
     }
+    this.colorCells();
+    this.rendered = true;
+    this.paint(camera);
+  }
+
+  private colorCells() {
+    this.footprintCells.clear();
+    const groups = new Map<
+      string,
+      { x: number; y: number; region: Region; footprints: Footprint[] }
+    >();
+    if (this.grid) {
+      for (const { footprint, point } of this.footprints) {
+        const x = point[0] * this.camera.k + this.camera.x,
+          y = point[1] * this.camera.k + this.camera.y;
+        if (
+          x < -this.radius ||
+          y < -this.radius ||
+          x > this.renderSize.width + this.radius ||
+          y > this.renderSize.height + this.radius
+        )
+          continue;
+        // Only map actual points covered by the displayed boundary frontier.
+        // A coastal point can occupy a cell whose center is outside the land;
+        // keep that very same cell, without moving it to a nearby location.
+        const shape = this.shapeAt(x, y);
+        if (!shape) continue;
+        const center = this.grid([
+          { x: x - this.gridOffset[0], y: y - this.gridOffset[1] },
+        ])[0];
+        if (!center) continue;
+        const key = this.cellKey(center.x, center.y);
+        let group = groups.get(key);
+        if (!group) {
+          group = {
+            x: center.x + this.gridOffset[0],
+            y: center.y + this.gridOffset[1],
+            region: this.owners.get(key) ?? shape.region,
+            footprints: [],
+          };
+          groups.set(key, group);
+        }
+        group.footprints.push(footprint);
+      }
+      const cell = new Path2D(this.grid.hexagon(this.radius - 0.35));
+      for (const [key, group] of groups) {
+        const path = new Path2D();
+        path.addPath(cell, new DOMMatrix().translate(group.x, group.y));
+        this.footprintCells.set(key, {
+          path,
+          region: group.region,
+          stats: summarizeFootprints(group.footprints),
+        });
+      }
+    }
     const context = this.image.getContext("2d")!;
     context.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
     context.fillStyle = "#fff";
-    context.fillRect(0, 0, renderWidth, renderHeight);
-    const shades = ["#f2f2f2", "#e5e5e5", "#ededed", "#dadada"];
+    context.fillRect(0, 0, this.renderSize.width, this.renderSize.height);
+    context.fillStyle = footprintColor();
+    context.strokeStyle = "#aaa";
+    context.lineWidth = 0.55;
     for (const shape of this.shapes) {
-      const hash = [...shape.region.id].reduce(
-        (value, character) => (value * 31 + character.charCodeAt(0)) | 0,
-        0,
-      );
-      context.fillStyle = shades[(hash >>> 0) % shades.length]!;
-      context.strokeStyle = "#aaa";
-      context.lineWidth = 0.55;
       context.fill(shape.cells);
       context.stroke(shape.cells);
     }
-    this.rendered = true;
-    this.paint(camera);
+    for (const cell of this.footprintCells.values()) {
+      context.fillStyle = footprintColor(cell.stats);
+      context.fill(cell.path);
+      context.stroke(cell.path);
+    }
   }
 
   covers(camera: Camera, size: Size): boolean {
@@ -175,14 +254,12 @@ export class HexMapRenderer {
       this.renderSize.height,
     );
     if (highlightedId) {
-      context.fillStyle = "#c6c6c6";
-      context.strokeStyle = "#777";
-      context.lineWidth = 0.6 / k;
+      context.strokeStyle = "#666";
+      context.lineWidth = 1 / k;
       const shape = this.shapes.find((s) => s.region.id === highlightedId);
-      if (shape) {
-        context.fill(shape.cells);
-        context.stroke(shape.cells);
-      }
+      if (shape) context.stroke(shape.cells);
+      for (const cell of this.footprintCells.values())
+        if (cell.region.id === highlightedId) context.stroke(cell.path);
     }
   }
 
@@ -211,7 +288,7 @@ export class HexMapRenderer {
     return `${column}:${row}`;
   }
 
-  pick(x: number, y: number): Region | undefined {
+  pick(x: number, y: number): MapHit | undefined {
     if (
       !this.grid ||
       x < 0 ||
@@ -228,8 +305,10 @@ export class HexMapRenderer {
         y: y + this.offset[1] - this.gridOffset[1],
       },
     ])[0];
-    return center
-      ? this.owners.get(this.cellKey(center.x, center.y))
-      : undefined;
+    if (!center) return;
+    const key = this.cellKey(center.x, center.y);
+    const cell = this.footprintCells.get(key);
+    const region = this.owners.get(key) ?? cell?.region;
+    return region ? { region, footprints: cell?.stats ?? null } : undefined;
   }
 }

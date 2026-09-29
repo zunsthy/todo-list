@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { chinaRegion } from "../model.ts";
-import type { Region, RegionBoundary } from "../types.ts";
+import type { Footprint, Region, RegionBoundary } from "../types.ts";
+import { lab } from "d3";
 import { mapGeometry, toWgs84, wgs84ToGcj02 } from "./coordinates.ts";
-import { prepareBoundary } from "./geometry.ts";
+import { prepareBoundary, projectPosition } from "./geometry.ts";
+import {
+  footprintColor,
+  footprintWeight,
+  summarizeFootprints,
+  coloredVisitTypes,
+  visitColor,
+} from "./footprints.ts";
 import {
   boundaryFrontier,
   bufferedViewport,
@@ -19,6 +27,112 @@ const region = (
   parentId: string | null,
   boundaryKey: string | null,
 ): Region => ({ ...chinaRegion(), id, parentId, boundaryKey });
+
+const footprint = (
+  time: string | null,
+  visitType: Footprint["visitType"] = "工作",
+): Footprint => ({
+  id: `${time}-${visitType}`,
+  time,
+  visitType,
+  regionId: "CN",
+  name: "测试",
+  notes: "",
+  pos: null,
+});
+
+test("footprints weight day/month/year precision without expanding records", () => {
+  assert.deepEqual(
+    ["2026-05-01", "2026-05", "2026", null, "2026-05-01T12:30"].map(
+      footprintWeight,
+    ),
+    [1, 10, 50, 1, 1],
+  );
+  const stats = summarizeFootprints([
+    footprint("2026-05-01"),
+    footprint("2026-05"),
+    footprint("2026"),
+    footprint(null, "旅游"),
+  ]);
+  assert.equal(stats.count, 4);
+  assert.equal(stats.weight, 62);
+  assert.equal(stats.black, false);
+  assert.deepEqual(stats.byType, {
+    工作: { count: 3, weight: 61 },
+    旅游: { count: 1, weight: 1 },
+  });
+});
+
+test("residence and study override any weight; filtering them out restores blue", () => {
+  const work = footprint("2026");
+  for (const type of ["居住", "求学"] as const) {
+    const records = [work, footprint("2026-05-01", type)];
+    const before = structuredClone(records);
+    assert.equal(footprintColor(summarizeFootprints(records)), "#000000");
+    assert.notEqual(footprintColor(summarizeFootprints([work])), "#000000");
+    assert.deepEqual(records, before);
+  }
+  assert.equal(footprintColor(summarizeFootprints([])), "#f2f2f2");
+});
+
+test("each category has a distinct hue and darkens on its own fixed scale", () => {
+  assert.equal(
+    new Set(coloredVisitTypes.map((type) => visitColor(type, 10))).size,
+    6,
+  );
+  for (const type of coloredVisitTypes) {
+    let previous = Infinity;
+    for (const weight of [1, 2, 10, 50, 100, 10000]) {
+      const color = visitColor(type, weight);
+      assert.notEqual(color, "#000000");
+      assert(lab(color).l < previous);
+      previous = lab(color).l;
+    }
+  }
+  assert.equal(
+    footprintColor(summarizeFootprints([footprint("2026-05")])),
+    footprintColor(
+      summarizeFootprints(
+        Array.from({ length: 10 }, () => footprint("2026-05-01")),
+      ),
+    ),
+  );
+});
+
+test("mixed cells use the heaviest category with stable tie breaking", () => {
+  const records = [
+    footprint("2026-05-01", "工作"),
+    footprint("2026-05", "户外"),
+  ];
+  assert.equal(
+    footprintColor(summarizeFootprints(records)),
+    visitColor("户外", 10),
+  );
+  const tied = [footprint("2026", "工作"), footprint("2026", "旅游")];
+  assert.equal(
+    footprintColor(summarizeFootprints(tied)),
+    visitColor("旅游", 50),
+  );
+  assert.equal(
+    footprintColor(summarizeFootprints([...tied].reverse())),
+    visitColor("旅游", 50),
+  );
+});
+
+test("footprint positions use the boundary projection and their own CRS", () => {
+  const original: [number, number] = [116.404, 39.915];
+  const wgs = projectPosition({
+    coordinates: original,
+    coordinateSystem: "WGS84",
+  })!;
+  const gcj = projectPosition({
+    coordinates: wgs84ToGcj02(original),
+    coordinateSystem: "GCJ02",
+  })!;
+  for (let axis = 0; axis < 2; axis++)
+    assert(Math.abs(wgs[axis]! - gcj[axis]!) < 1e-6);
+  assert.deepEqual(original, [116.404, 39.915]);
+});
 
 test("hex grid origins stay aligned to map coordinates across pan and row wraps", () => {
   const radius = 6.5;

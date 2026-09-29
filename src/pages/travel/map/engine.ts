@@ -1,6 +1,6 @@
 import { select, zoom, zoomIdentity, type D3ZoomEvent } from "d3";
 import { buildTree } from "../model.ts";
-import type { Region, RegionBoundary } from "../types.ts";
+import type { Footprint, Region, RegionBoundary } from "../types.ts";
 import {
   prepareBoundary,
   displayGeometry,
@@ -15,7 +15,7 @@ import {
   type Bounds,
   type Size,
 } from "./layout.ts";
-import { HexMapRenderer } from "./renderer.ts";
+import { HexMapRenderer, type MapHit } from "./renderer.ts";
 
 export interface MapStatus {
   loading: boolean;
@@ -24,8 +24,7 @@ export interface MapStatus {
   scale: number;
   error: string;
 }
-export interface MapHover {
-  region: Region;
+export interface MapHover extends MapHit {
   x: number;
   y: number;
 }
@@ -42,6 +41,7 @@ export const createHexMap = (
   options: MapOptions,
 ) => {
   let regions: Region[] = [],
+    footprints: Footprint[] = [],
     tree = buildTree({ regions, footprints: [] });
   let size: Size = { width: 1, height: 1 },
     camera = zoomIdentity;
@@ -248,12 +248,12 @@ export const createHexMap = (
   const hover = (event: MouseEvent) => {
     if (moving || status.loading) return;
     const [x, y] = point(event),
-      region = renderer.pick(x, y);
-    const nextId = region?.id ?? null;
+      hit = renderer.pick(x, y);
+    const nextId = hit?.region.id ?? null;
     const regionChanged = hoveredId !== nextId;
     hoveredId = nextId;
-    canvas.style.cursor = region ? "pointer" : "grab";
-    options.onHover(region ? { region, x, y } : null);
+    canvas.style.cursor = hit ? "pointer" : "grab";
+    options.onHover(hit ? { ...hit, x, y } : null);
     if (regionChanged) paint();
   };
   const leave = () => {
@@ -262,13 +262,13 @@ export const createHexMap = (
   };
   const click = (event: MouseEvent) => {
     if (moving || status.loading) return;
-    const region = renderer.pick(...point(event));
+    const region = renderer.pick(...point(event))?.region;
     if (region) options.onSelect(region);
   };
   const edit = (event: MouseEvent) => {
     event.preventDefault();
     if (moving || status.loading) return;
-    const region = renderer.pick(...point(event));
+    const region = renderer.pick(...point(event))?.region;
     if (region) options.onEdit(region);
   };
   const keydown = (event: KeyboardEvent) => {
@@ -290,8 +290,17 @@ export const createHexMap = (
   canvas.addEventListener("keydown", keydown);
 
   return {
-    update(nextRegions: Region[], selected: string | null) {
+    update(
+      nextRegions: Region[],
+      selected: string | null,
+      nextFootprints: Footprint[],
+    ) {
       selectedId = selected;
+      if (footprints !== nextFootprints) {
+        footprints = nextFootprints;
+        clearHover();
+        renderer.setFootprints(footprints);
+      }
       if (regions !== nextRegions) {
         sequence++;
         clearHover();

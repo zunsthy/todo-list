@@ -104,8 +104,10 @@ export const parsePos = (value: unknown): Pos | null => {
 export const parseTime = (value: unknown): string | null => {
   if (value === null) return null;
   const text = string(value, "时间");
-  const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(text);
-  if (!match) return fail("时间请填写 YYYY、YYYY-MM 或 YYYY-MM-DD，未知可留空");
+  const match =
+    /^(\d{4})(?:-(\d{2})(?:-(\d{2})(?:[T ](\d{2}):(\d{2}))?)?)?$/.exec(text);
+  if (!match)
+    return fail("时间请填写年、月、日或 YYYY-MM-DD HH:mm，未知可留空");
   const year = Number(match[1]),
     month = Number(match[2] ?? 1),
     day = Number(match[3] ?? 1);
@@ -113,7 +115,13 @@ export const parseTime = (value: unknown): string | null => {
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1]!)
     fail("时间不是有效的日历日期");
-  return text;
+  if (
+    match[4] !== undefined &&
+    (Number(match[4]) > 23 || Number(match[5]) > 59)
+  )
+    fail("时间的小时须为 00～23，分钟须为 00～59");
+  // Local wall time; do not invent a timezone or shift the calendar date.
+  return text.replace(" ", "T");
 };
 export const parseRegion = (value: unknown): Region => {
   const data = object(value, "地区");

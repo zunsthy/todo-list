@@ -50,6 +50,36 @@
     color: #666;
     margin-left: auto;
   }
+  .travel-map-legend {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #bbb;
+    background: rgb(255 255 255 / 96%);
+    color: #555;
+    font-size: 0.8rem;
+    pointer-events: none;
+  }
+  .travel-map-legend > div {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+  }
+  .travel-map-legend span {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid #aaa;
+  }
+  .travel-map-notice {
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+    color: #666;
+    font-size: 0.85rem;
+  }
   .travel-map-stage {
     position: relative;
     flex: 1;
@@ -94,6 +124,11 @@
   }
   .travel-map-tooltip small {
     color: #666;
+  }
+  .travel-map-cell-stats {
+    border-top: 1px solid #ddd;
+    margin-top: 0.15rem;
+    padding-top: 0.2rem;
   }
   @media (max-width: 600px) {
     .travel-map-toolbar select {

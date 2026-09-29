@@ -116,8 +116,17 @@ test("positions require coordinates and coordinate system together", () => {
     assert.throws(() => parsePos(value));
 });
 test("single dates preserve precision and validate the calendar", () => {
-  for (const value of [null, "2026", "2026-09", "2024-02-29", "2000-02-29"])
+  for (const value of [
+    null,
+    "2026",
+    "2026-09",
+    "2024-02-29",
+    "2000-02-29",
+    "2026-09-18T16:30",
+    "2024-02-29T00:00",
+  ])
     assert.equal(parseTime(value), value);
+  assert.equal(parseTime("2026-09-18 16:30"), "2026-09-18T16:30");
   for (const value of [
     "",
     "0000",
@@ -129,12 +138,21 @@ test("single dates preserve precision and validate the calendar", () => {
     "2026-09-00",
     "2026-9",
     "2026-09-05T00:00:00Z",
+    "2026-09T10:00",
+    "2026-09-18T24:00",
+    "2026-09-18T12:60",
+    "2026-02-29T01:00",
     { start: "2026" },
   ])
     assert.throws(() => parseTime(value));
 });
 test("footprints have seven fields and a single literal visit type", () => {
   const value = parseFootprint(footprint("CN"));
+  assert.equal(
+    parseFootprint({ ...value, visitType: "办事", time: "2026-03-17 10:30" })
+      .time,
+    "2026-03-17T10:30",
+  );
   assert.deepEqual(Object.keys(value).sort(), [
     "id",
     "name",

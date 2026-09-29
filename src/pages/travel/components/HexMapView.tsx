@@ -1,23 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { TravelDatabase } from "../db.ts";
-import type { Region } from "../types.ts";
+import { visitTypes, type Footprint, type Region } from "../types.ts";
 import { buildTree } from "../model.ts";
 import type { HexMap, MapHover, MapStatus } from "../map/engine.ts";
+
+// Color calculations load with the map, never with the tree-only view.
+const MapLegend = lazy(() => import("./MapLegend.js"));
 
 export const HexMapView = (props: {
   database: TravelDatabase;
   regions: Region[];
+  footprints: Footprint[];
   selectedId: string | null;
   query: string;
   readOnly: boolean;
   onSelect(id: string): void;
   onEdit(region: Region): void;
 }) => {
-  const { database, regions, selectedId, query, readOnly } = props;
+  const { database, regions, footprints, selectedId, query, readOnly } = props;
   const latest = useRef(props);
   latest.current = props;
   const canvas = useRef<HTMLCanvasElement>(null),
-    stage = useRef<HTMLDivElement>(null);
+    stage = useRef<HTMLDivElement>(null),
+    tooltip = useRef<HTMLDivElement>(null);
   const engine = useRef<HexMap | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<MapStatus>({
@@ -31,6 +36,10 @@ export const HexMapView = (props: {
   const tree = useMemo(() => buildTree({ regions, footprints: [] }), [regions]);
   const selected = selectedId ? tree.byId.get(selectedId) : undefined;
   const hasBoundaries = regions.some((r) => r.boundaryKey);
+  const missingPositions = useMemo(
+    () => footprints.filter((footprint) => !footprint.pos).length,
+    [footprints],
+  );
   const locatable = useMemo(() => {
     const ids = new Set(
       regions
@@ -120,7 +129,11 @@ export const HexMapView = (props: {
           },
         });
         engine.current = map;
-        map.update(latest.current.regions, latest.current.selectedId);
+        map.update(
+          latest.current.regions,
+          latest.current.selectedId,
+          latest.current.footprints,
+        );
         map.resize(container.clientWidth, container.clientHeight);
       })
       .catch((error) => {
@@ -140,11 +153,11 @@ export const HexMapView = (props: {
   }, [database, hasBoundaries, attempt]);
 
   useEffect(() => {
-    engine.current?.update(regions, selectedId);
-  }, [regions, selectedId]);
+    engine.current?.update(regions, selectedId, footprints);
+  }, [regions, selectedId, footprints]);
 
   return (
-    <section className="travel-map-panel" aria-label="六边形边界地图">
+    <section className="travel-map-panel" aria-label="六边形足迹地图">
       <div className="travel-map-toolbar">
         <div className="travel-actions">
           <button
@@ -231,16 +244,24 @@ export const HexMapView = (props: {
           {status.missing} 条引用的边界未找到，已跳过。
         </p>
       )}
+      {missingPositions > 0 && (
+        <p className="travel-map-notice" role="status">
+          {missingPositions} 条足迹没有坐标，未参与地图染色。
+        </p>
+      )}
       <div className="travel-map-stage" ref={stage}>
         <canvas
           ref={canvas}
           className="travel-hex-map"
           tabIndex={0}
-          aria-label="行政区六边形地图，可滚轮缩放、拖动平移，双击地区编辑；键盘加减号缩放，F2编辑当前地区"
+          aria-label="足迹六边形地图，居住和求学为黑色，其余方式各有颜色并按日1、月10、年50加权控制深浅；可滚轮缩放、拖动平移，双击地区编辑；键盘加减号缩放，F2编辑当前地区"
           data-visible-regions={status.visible}
           data-map-scale={status.scale}
           aria-busy={status.loading}
         />
+        <Suspense fallback={null}>
+          <MapLegend />
+        </Suspense>
         {!hasBoundaries && (
           <p className="travel-map-empty">
             还没有可展示的边界，请先在数据管理中导入地区边界。
@@ -249,6 +270,7 @@ export const HexMapView = (props: {
         {hover && (
           <div
             className="travel-map-tooltip"
+            ref={tooltip}
             role="tooltip"
             style={{
               left: Math.max(
@@ -262,7 +284,9 @@ export const HexMapView = (props: {
                 8,
                 Math.min(
                   hover.y + 14,
-                  (stage.current?.clientHeight ?? 500) - 90,
+                  (stage.current?.clientHeight ?? 500) -
+                    (tooltip.current?.offsetHeight ?? 180) -
+                    8,
                 ),
               ),
             }}
@@ -277,6 +301,19 @@ export const HexMapView = (props: {
                 .map((r) => r.name)
                 .join(" / ")}
             </span>
+            <span className="travel-map-cell-stats">
+              当前格子：{hover.footprints?.count ?? 0} 条足迹
+            </span>
+            {hover.footprints && (
+              <small>
+                {visitTypes
+                  .flatMap((type) => {
+                    const stats = hover.footprints!.byType[type];
+                    return stats ? [`${type} ${stats.count} 条`] : [];
+                  })
+                  .join(" · ")}
+              </small>
+            )}
             <small>
               {readOnly ? "服务端控制中，编辑已禁用" : "双击编辑地区"}
             </small>
