@@ -17,6 +17,9 @@ export interface Size {
 }
 
 export const HEX_RADIUS = 6;
+export const hexRadius = ({ width, height }: Size): number =>
+  Math.max(HEX_RADIUS, Math.round(Math.sqrt((width * height) / 18000) * 2) / 2);
+
 export const hexGridOffset = (camera: Camera, radius: number): Point => {
   // Two rows form a repeating rectangle; a single-row offset would change
   // the staggered column alignment. Keep extra cells above/left for clipping.

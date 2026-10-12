@@ -10,6 +10,7 @@ import {
 } from "./footprints.ts";
 import {
   HEX_RADIUS,
+  hexRadius,
   bufferedViewport,
   hexGridOffset,
   type Bounds,
@@ -105,10 +106,7 @@ export class HexMapRenderer {
       return { ...shape, ...hit, cells: new Path2D() };
     });
     if (this.shapes.length) {
-      const radius = Math.max(
-        HEX_RADIUS,
-        Math.round(Math.sqrt((width * height) / 18000) * 2) / 2,
-      );
+      const radius = hexRadius(size);
       this.radius = radius;
       this.gridOffset = hexGridOffset(this.camera, radius);
       const [gridX, gridY] = this.gridOffset;

@@ -4,7 +4,12 @@ import { chinaRegion } from "../model.ts";
 import type { Footprint, Region, RegionBoundary } from "../types.ts";
 import { lab } from "d3";
 import { mapGeometry, toWgs84, wgs84ToGcj02 } from "./coordinates.ts";
-import { prepareBoundary, projectPosition } from "./geometry.ts";
+import {
+  metersPerMapUnit,
+  prepareBoundary,
+  projectPosition,
+} from "./geometry.ts";
+import { limitMapZoom, mapScaleBar, maxMapZoom } from "./scale.ts";
 import {
   footprintColor,
   footprintWeight,
@@ -16,7 +21,9 @@ import {
   boundaryFrontier,
   bufferedViewport,
   canExpandRegion,
+  fitBounds,
   hexGridOffset,
+  hexRadius,
   inViewport,
   visibleRegions,
   type RegionMetrics,
@@ -39,6 +46,103 @@ const footprint = (
   name: "测试",
   notes: "",
   pos: null,
+});
+
+test("map scale uses CSS pixels, nice distances and switches between km and m", () => {
+  const size = { width: 800, height: 600 };
+  const at = (k: number, longitude = 0, latitude = 0) => {
+    const [x, y] = projectPosition({
+      coordinates: [longitude, latitude],
+      coordinateSystem: "WGS84",
+    })!;
+    return mapScaleBar(
+      { k, x: size.width / 2 - x * k, y: size.height / 2 - y * k },
+      size,
+    )!;
+  };
+  const initial = at(4),
+    closer = at(8),
+    highLatitude = at(4, 0, 60);
+  assert.equal(initial.label, "500 km");
+  assert.equal(closer.label, "200 km");
+  assert.equal(at(16384).label, "100 m");
+  assert.deepEqual(at(4, 120), initial);
+  assert(
+    Math.abs(
+      (closer.meters / closer.width) * 2 - initial.meters / initial.width,
+    ) < 1e-6,
+  );
+  assert(
+    Math.abs(
+      (highLatitude.meters / highLatitude.width) * 2 -
+        initial.meters / initial.width,
+    ) < 1e-6,
+  );
+  for (const bar of [initial, closer, highLatitude, at(16384)]) {
+    assert(bar.width > 0 && bar.width <= 120);
+  }
+});
+
+test("map scale fits narrow viewports and hides for unusable views", () => {
+  const size = { width: 240, height: 300 };
+  const camera = { x: size.width / 2 - 1024, y: size.height / 2 - 1024, k: 1 };
+  assert(mapScaleBar(camera, size)!.width <= size.width / 3);
+  assert.equal(mapScaleBar({ ...camera, k: 0 }, size), null);
+  assert.equal(mapScaleBar({ ...camera, x: NaN }, size), null);
+  assert.equal(mapScaleBar({ ...camera, y: 1e6 }, size), null);
+  assert.equal(mapScaleBar(camera, { width: 1, height: 1 }), null);
+});
+
+test("zoom stops at 1 km cell spacing for different latitudes and canvas sizes", () => {
+  for (const size of [
+    { width: 800, height: 600 },
+    { width: 3840, height: 2160 },
+  ]) {
+    for (const latitude of [0, 40, 60]) {
+      const center = projectPosition({
+        coordinates: [116, latitude],
+        coordinateSystem: "WGS84",
+      })!;
+      const camera = {
+        k: 16384,
+        x: size.width / 2 - center[0] * 16384,
+        y: size.height / 2 - center[1] * 16384,
+      };
+      const limited = limitMapZoom(camera, size);
+      const meters =
+        (hexRadius(size) * Math.sqrt(3) * metersPerMapUnit(center)!) /
+        limited.k;
+      assert(Math.abs(meters - 1000) < 1e-6);
+      assert(limited.k < camera.k);
+      assert(
+        Math.abs((size.width / 2 - limited.x) / limited.k - center[0]) < 1e-9,
+      );
+      assert(
+        Math.abs((size.height / 2 - limited.y) / limited.k - center[1]) < 1e-9,
+      );
+      assert(Math.abs(limited.k - maxMapZoom(limited, size)) < 1e-9);
+    }
+  }
+});
+
+test("region focus respects the cell zoom limit without changing coarser views", () => {
+  const size = { width: 800, height: 600 };
+  const tiny = fitBounds(
+    [
+      [1700, 700],
+      [1700.01, 700.01],
+    ],
+    size,
+  );
+  assert(limitMapZoom(tiny, size).k < tiny.k);
+  const wide = fitBounds(
+    [
+      [1500, 500],
+      [1800, 900],
+    ],
+    size,
+  );
+  assert.strictEqual(limitMapZoom(wide, size), wide);
 });
 
 test("footprints weight day/month/year precision without expanding records", () => {

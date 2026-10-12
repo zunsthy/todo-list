@@ -15,6 +15,23 @@ export const projectPosition = (pos: Pos): Point | null => {
   return point?.every(Number.isFinite) ? point : null;
 };
 
+// Local ground distance for the same spherical Mercator used by boundaries.
+// Outside the projection's clipped world, a scale would be misleading.
+export const metersPerMapUnit = (point: Point): number | null => {
+  if (!point.every(Number.isFinite)) return null;
+  const latitude = projection.invert!(point)?.[1];
+  const limit = (Math.atan(Math.sinh(Math.PI)) * 180) / Math.PI;
+  if (
+    latitude === undefined ||
+    !Number.isFinite(latitude) ||
+    Math.abs(latitude) > limit
+  )
+    return null;
+  return (
+    (6371008.8 * Math.cos((latitude * Math.PI) / 180)) / projection.scale()
+  );
+};
+
 export interface PreparedBoundary extends RegionMetrics {
   geometry: MultiPolygon;
   levels: Map<number, MultiPolygon>;

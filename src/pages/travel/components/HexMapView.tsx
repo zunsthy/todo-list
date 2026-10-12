@@ -30,6 +30,8 @@ export const HexMapView = (props: {
     visible: 0,
     missing: 0,
     scale: 1,
+    scaleBar: null,
+    canZoomIn: true,
     error: "",
   });
   const [hover, setHover] = useState<MapHover | null>(null);
@@ -96,6 +98,7 @@ export const HexMapView = (props: {
         loading: false,
         visible: 0,
         missing: 0,
+        scaleBar: null,
         error: "",
       }));
       setHover(null);
@@ -163,7 +166,10 @@ export const HexMapView = (props: {
           <button
             type="button"
             aria-label="放大地图"
-            disabled={!hasBoundaries}
+            title={
+              status.canZoomIn ? "放大地图" : "已达到单格约 1 km 的放大上限"
+            }
+            disabled={!hasBoundaries || !status.canZoomIn}
             onClick={() => engine.current?.zoom(1.7)}
           >
             ＋
@@ -262,6 +268,21 @@ export const HexMapView = (props: {
         <Suspense fallback={null}>
           <MapLegend />
         </Suspense>
+        {hasBoundaries && status.scaleBar && (
+          <div
+            className="travel-map-scale"
+            role="img"
+            aria-label={`地图比例尺：${status.scaleBar.label}，以地图中心附近为参考`}
+            title="以地图中心纬度为参考的近似距离"
+          >
+            <span>{status.scaleBar.label}</span>
+            <span
+              className="travel-map-scale-line"
+              style={{ width: status.scaleBar.width }}
+              aria-hidden="true"
+            />
+          </div>
+        )}
         {!hasBoundaries && (
           <p className="travel-map-empty">
             还没有可展示的边界，请先在数据管理中导入地区边界。

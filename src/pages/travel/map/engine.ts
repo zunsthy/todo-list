@@ -16,12 +16,20 @@ import {
   type Size,
 } from "./layout.ts";
 import { HexMapRenderer, type MapHit } from "./renderer.ts";
+import {
+  limitMapZoom,
+  mapScaleBar,
+  maxMapZoom,
+  type MapScaleBar,
+} from "./scale.ts";
 
 export interface MapStatus {
   loading: boolean;
   visible: number;
   missing: number;
   scale: number;
+  scaleBar: MapScaleBar | null;
+  canZoomIn: boolean;
   error: string;
 }
 export interface MapHover extends MapHit {
@@ -59,6 +67,8 @@ export const createHexMap = (
     visible: 0,
     missing: 0,
     scale: 1,
+    scaleBar: null,
+    canZoomIn: true,
     error: "",
   };
   const cache = new Map<string, PreparedBoundary>();
@@ -66,7 +76,14 @@ export const createHexMap = (
     missing = new Set<string>();
   const renderer = new HexMapRenderer(canvas);
   const announce = (changes: Partial<MapStatus>) => {
-    status = { ...status, ...changes, scale: camera.k, missing: missing.size };
+    status = {
+      ...status,
+      ...changes,
+      scale: camera.k,
+      scaleBar: initialized && cache.size ? mapScaleBar(camera, size) : null,
+      canZoomIn: camera.k < maxMapZoom(camera, size) * (1 - 1e-9),
+      missing: missing.size,
+    };
     if (!destroyed) options.onStatus(status);
   };
   const clearHover = () => {
@@ -125,9 +142,10 @@ export const createHexMap = (
     ];
   };
   const setCamera = (next: { x: number; y: number; k: number }) => {
+    const limited = limitMapZoom(next, size);
     select(canvas).call(
       behavior.transform,
-      zoomIdentity.translate(next.x, next.y).scale(next.k),
+      zoomIdentity.translate(limited.x, limited.y).scale(limited.k),
     );
     // Repeated focus/reset can keep the same transform, but still needs to
     // finish the pending boundary load and clear its loading state.
@@ -207,7 +225,7 @@ export const createHexMap = (
     }, 90);
   };
   const behavior = zoom<HTMLCanvasElement, unknown>()
-    .scaleExtent([0.1, 16384])
+    .scaleExtent([0.1, maxMapZoom(camera, size)])
     .clickDistance(4)
     .filter(
       (event) =>
@@ -221,16 +239,19 @@ export const createHexMap = (
       clearHover();
     })
     .on("zoom", (event: D3ZoomEvent<HTMLCanvasElement, unknown>) => {
-      if (
+      const cameraChanged =
         camera.x !== event.transform.x ||
         camera.y !== event.transform.y ||
-        camera.k !== event.transform.k
-      ) {
+        camera.k !== event.transform.k;
+      camera = event.transform;
+      // Latitude changes the next zoom limit, but panning must not itself
+      // zoom out or rebuild the map at a different geographic resolution.
+      behavior.scaleExtent([0.1, Math.max(camera.k, maxMapZoom(camera, size))]);
+      if (cameraChanged) {
         changed = true;
         sequence++;
         announce({ loading: true });
       }
-      camera = event.transform;
       paint();
       // Refill the overscan before it runs out, even during a long gesture.
       if (!renderer.covers(camera, size) && timer === undefined) schedule();
