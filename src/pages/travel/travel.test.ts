@@ -15,6 +15,7 @@ import {
   parsePos,
   parseTime,
   planImport,
+  retainSnapshot,
   validateSnapshot,
 } from "./model.ts";
 import type {
@@ -63,6 +64,24 @@ const seed = (): TravelData => ({
   regions: [chinaRegion()],
   footprints: [],
   regionBoundaries: [],
+});
+
+test("unchanged snapshots retain references without swallowing real edits", () => {
+  const previous = { regions: [chinaRegion()], footprints: [footprint("CN")] };
+  assert.strictEqual(
+    retainSnapshot(previous, structuredClone(previous)),
+    previous,
+  );
+  const changedFootprint = structuredClone(previous);
+  changedFootprint.footprints[0]!.notes = "updated";
+  const footprintsOnly = retainSnapshot(previous, changedFootprint);
+  assert.strictEqual(footprintsOnly.regions, previous.regions);
+  assert.strictEqual(footprintsOnly.footprints, changedFootprint.footprints);
+  const changedRegion = structuredClone(previous);
+  changedRegion.regions[0]!.boundaryKey = "new-boundary";
+  const regionsOnly = retainSnapshot(previous, changedRegion);
+  assert.strictEqual(regionsOnly.footprints, previous.footprints);
+  assert.strictEqual(regionsOnly.regions, changedRegion.regions);
 });
 const children = (parentId: string, ids: string[], coverage = "complete") => ({
   format: "todo-list-region-children",

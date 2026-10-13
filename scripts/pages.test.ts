@@ -44,8 +44,9 @@ test("only works pages load works styles and expose catalog bridge control", asy
   assert.match(travel, /<title>足迹 · Todo-list<\/title>/);
   assert.match(travel, /href="\/assets\/pages\/travel\/styles\/index.css"/);
   assert.doesNotMatch(travel, /todo-list-catalog-bridge|pages\/works\/styles/);
-  assert.match(travel, /https:\/\/esm.sh\/d3-hexgrid@0.3.0/);
-  assert.doesNotMatch(works, /d3-hexgrid/);
+  assert.match(travel, /https:\/\/esm.sh\/d3-hexbin@0.2.2/);
+  assert.doesNotMatch(travel, /d3-hexgrid/);
+  assert.doesNotMatch(works, /d3-hexbin/);
   JSON.parse(
     travel.match(/<script type="importmap">([\s\S]*?)<\/script>/)![1]!,
   );

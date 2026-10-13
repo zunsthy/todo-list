@@ -1,6 +1,6 @@
-import { geoClipRectangle, geoIdentity, geoPath } from "d3";
-import { hexgrid, type HexLayout } from "d3-hexgrid";
-import type { GeometryCollection, MultiPolygon } from "geojson";
+import { geoPath } from "d3";
+import { hexbin, type Hexbin } from "d3-hexbin";
+import type { MultiPolygon } from "geojson";
 import type { Footprint, Region } from "../types.ts";
 import { projectPosition } from "./geometry.ts";
 import {
@@ -22,7 +22,6 @@ import {
 export interface MapShape {
   region: Region;
   geometry: MultiPolygon;
-  sourceGeometry?: MultiPolygon;
 }
 interface HitArea {
   path: Path2D;
@@ -45,7 +44,7 @@ export class HexMapRenderer {
   private image = document.createElement("canvas");
   private picking = document.createElement("canvas").getContext("2d")!;
   private hitAreas = new WeakMap<MultiPolygon, HitArea>();
-  private grid: HexLayout | null = null;
+  private grid: Hexbin<{ x: number; y: number }> | null = null;
   private owners = new Map<string, Region>();
   private footprintCells = new Map<string, FootprintCell>();
   private footprints: { footprint: Footprint; point: Point }[] = [];
@@ -94,7 +93,7 @@ export class HexMapRenderer {
     this.shapes = shapes.map((shape) => {
       // Independently simplified neighbors may leave subpixel seams. Assign
       // cells using the original projected geometry; cache its native path.
-      const geometry = shape.sourceGeometry ?? shape.geometry;
+      const geometry = shape.geometry;
       let hit = this.hitAreas.get(geometry);
       if (!hit) {
         hit = {
@@ -112,21 +111,14 @@ export class HexMapRenderer {
       const [gridX, gridY] = this.gridOffset;
       const gridWidth = Math.ceil(renderWidth - gridX);
       const gridHeight = Math.ceil(renderHeight - gridY);
-      const transform = geoIdentity()
-        .scale(this.camera.k)
-        .translate([this.camera.x - gridX, this.camera.y - gridY]);
-      transform.postclip(geoClipRectangle(0, 0, gridWidth, gridHeight));
-      const geography: GeometryCollection = {
-        type: "GeometryCollection",
-        geometries: shapes.map((s) => s.geometry),
-      };
-      const layout = hexgrid()
-        .extent([gridWidth, gridHeight])
-        .geography(geography)
-        .projection(transform)
-        .pathGenerator(geoPath(transform))
-        .hexRadius(radius)
-        .edgePrecision(0.3)([]);
+      const layout = hexbin<{ x: number; y: number }>()
+        .extent([
+          [0, 0],
+          [gridWidth, gridHeight],
+        ])
+        .radius(radius)
+        .x((point) => point.x)
+        .y((point) => point.y);
       this.grid = layout;
       const cell = new Path2D(layout.hexagon(radius - 0.35));
       // Use the full lattice, not pixel-filtered centers: antialiasing can

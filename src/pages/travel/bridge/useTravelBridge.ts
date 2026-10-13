@@ -49,7 +49,7 @@ export const useTravelBridge = (data: TravelDataState) => {
   useEffect(() => {
     if (!database || !pageId || !url) return;
     const router = createTravelBridgeRouter(database, () => {
-      void refresh().catch(reportError);
+      void refresh(true).catch(reportError);
     });
     const client = createBridgeClient({
       parseRequest: parseTravelBridgeRpcRequest,

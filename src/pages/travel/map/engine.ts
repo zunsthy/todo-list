@@ -1,11 +1,7 @@
 import { select, zoom, zoomIdentity, type D3ZoomEvent } from "d3";
 import { buildTree } from "../model.ts";
 import type { Footprint, Region, RegionBoundary } from "../types.ts";
-import {
-  prepareBoundary,
-  displayGeometry,
-  type PreparedBoundary,
-} from "./geometry.ts";
+import { prepareBoundary, type PreparedBoundary } from "./geometry.ts";
 import {
   boundaryFrontier,
   bufferedViewport,
@@ -54,6 +50,8 @@ export const createHexMap = (
   let size: Size = { width: 1, height: 1 },
     camera = zoomIdentity;
   let destroyed = false,
+    active = true,
+    needsRefresh = true,
     initialized = false,
     moving = false,
     changed = false,
@@ -91,34 +89,51 @@ export const createHexMap = (
     options.onHover(null);
   };
   const paint = () => {
-    if (frame) return;
+    if (!active || frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      if (!destroyed) renderer.paint(camera, moving ? null : hoveredId);
+      if (!destroyed && active)
+        renderer.paint(camera, moving ? null : hoveredId);
     });
   };
   const load = async (keys: string[]) => {
+    const token = sequence;
     let index = 0;
     const worker = async () => {
-      while (index < keys.length && !destroyed) {
+      while (
+        index < keys.length &&
+        !destroyed &&
+        active &&
+        token === sequence
+      ) {
         const key = keys[index++]!;
         if (cache.has(key) || missing.has(key)) continue;
-        if (!pending.has(key)) {
-          const task = (async () => {
-            const boundary = await options.readBoundary(key);
-            if (destroyed) return;
-            if (!boundary) {
-              missing.add(key);
-              return;
-            }
-            cache.set(key, prepareBoundary(boundary));
-            // Large original geometries are prepared once, without blocking a
-            // whole batch of district reads behind a single long render task.
-            await new Promise<void>((resolve) => setTimeout(resolve, 0));
-          })().finally(() => pending.delete(key));
-          pending.set(key, task);
+        while (
+          !cache.has(key) &&
+          !missing.has(key) &&
+          active &&
+          !destroyed &&
+          token === sequence
+        ) {
+          if (!pending.has(key)) {
+            const task = (async () => {
+              const boundary = await options.readBoundary(key);
+              if (destroyed || !active || token !== sequence) return;
+              if (!boundary) {
+                missing.add(key);
+                return;
+              }
+              cache.set(key, prepareBoundary(boundary));
+              // Large original geometries are prepared once, without blocking a
+              // whole batch of district reads behind a single long render task.
+              await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            })().finally(() => pending.delete(key));
+            pending.set(key, task);
+          }
+          // A read from a cancelled view may finish without filling the cache.
+          // Retry that key for the current view rather than fitting partial bounds.
+          await pending.get(key);
         }
-        await pending.get(key);
       }
     };
     await Promise.all(Array.from({ length: 3 }, worker));
@@ -153,7 +168,7 @@ export const createHexMap = (
   };
 
   const refresh = async () => {
-    if (destroyed || size.width < 2 || !regions.length) return;
+    if (destroyed || !active || size.width < 2 || !regions.length) return;
     const token = ++sequence;
     announce({ loading: true, error: "" });
     try {
@@ -183,13 +198,13 @@ export const createHexMap = (
           const boundary = cache.get(region.boundaryKey!)!;
           return {
             region,
-            geometry: displayGeometry(boundary, camera.k),
-            sourceGeometry: boundary.geometry,
+            geometry: boundary.geometry,
           };
         }),
         camera,
         size,
       );
+      needsRefresh = false;
       announce({
         loading: false,
         visible: view.visible.filter((region) =>
@@ -218,7 +233,10 @@ export const createHexMap = (
     }
   };
   const schedule = () => {
+    needsRefresh = true;
     clearTimeout(timer);
+    timer = undefined;
+    if (!active || destroyed) return;
     timer = setTimeout(() => {
       timer = undefined;
       void refresh();
@@ -229,6 +247,7 @@ export const createHexMap = (
     .clickDistance(4)
     .filter(
       (event) =>
+        active &&
         event.type !== "dblclick" &&
         (!event.ctrlKey || event.type === "wheel") &&
         !event.button,
@@ -248,6 +267,7 @@ export const createHexMap = (
       // zoom out or rebuild the map at a different geographic resolution.
       behavior.scaleExtent([0.1, Math.max(camera.k, maxMapZoom(camera, size))]);
       if (cameraChanged) {
+        needsRefresh = true;
         changed = true;
         sequence++;
         announce({ loading: true });
@@ -267,7 +287,7 @@ export const createHexMap = (
     return [event.clientX - bounds.left, event.clientY - bounds.top] as const;
   };
   const hover = (event: MouseEvent) => {
-    if (moving || status.loading) return;
+    if (!active || moving || status.loading) return;
     const [x, y] = point(event),
       hit = renderer.pick(x, y);
     const nextId = hit?.region.id ?? null;
@@ -282,17 +302,18 @@ export const createHexMap = (
     paint();
   };
   const click = (event: MouseEvent) => {
-    if (moving || status.loading) return;
+    if (!active || moving || status.loading) return;
     const region = renderer.pick(...point(event))?.region;
     if (region) options.onSelect(region);
   };
   const edit = (event: MouseEvent) => {
     event.preventDefault();
-    if (moving || status.loading) return;
+    if (!active || moving || status.loading) return;
     const region = renderer.pick(...point(event))?.region;
     if (region) options.onEdit(region);
   };
   const keydown = (event: KeyboardEvent) => {
+    if (!active) return;
     if (event.key === "+" || event.key === "=" || event.key === "-") {
       event.preventDefault();
       select(canvas).call(behavior.scaleBy, event.key === "-" ? 1 / 1.6 : 1.6);
@@ -311,6 +332,27 @@ export const createHexMap = (
   canvas.addEventListener("keydown", keydown);
 
   return {
+    invalidate() {
+      sequence++;
+      cache.clear();
+      missing.clear();
+      clearHover();
+      schedule();
+    },
+    setActive(next: boolean) {
+      if (active === next || destroyed) return;
+      active = next;
+      if (!active) {
+        sequence++;
+        clearTimeout(timer);
+        timer = undefined;
+        cancelAnimationFrame(frame);
+        frame = 0;
+        moving = false;
+        clearHover();
+      } else if (needsRefresh) schedule();
+      else paint();
+    },
     update(
       nextRegions: Region[],
       selected: string | null,
@@ -334,6 +376,8 @@ export const createHexMap = (
       } else paint();
     },
     resize(width: number, height: number) {
+      // A hidden panel has zero dimensions; retain its camera and backing image.
+      if (width < 2 || height < 2) return;
       const next = {
         width: Math.max(1, Math.floor(width)),
         height: Math.max(1, Math.floor(height)),

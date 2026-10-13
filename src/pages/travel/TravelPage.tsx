@@ -21,6 +21,7 @@ export default function TravelPage() {
   const [visitType, setVisitType] = useState("");
   const [visitedOnly, setVisitedOnly] = useState(false);
   const [view, setView] = useState<"tree" | "map">("tree");
+  const [mapOpened, setMapOpened] = useState(false);
   const [editor, setEditor] = useState<TravelEditor | null>(null);
   const tree = useMemo(() => buildTree(snapshot), [snapshot]);
   const selectedId =
@@ -88,10 +89,15 @@ export default function TravelPage() {
             onVisitTypeChange={setVisitType}
             onVisitedOnlyChange={setVisitedOnly}
             view={view}
-            onViewChange={setView}
+            onViewChange={(next) => {
+              if (next === "map") setMapOpened(true);
+              setView(next);
+            }}
           />
-          {view === "map" && data.database ? (
+          {mapOpened && data.database && (
             <HexMapView
+              active={view === "map"}
+              revision={data.revision}
               database={data.database}
               regions={snapshot.regions}
               footprints={footprints}
@@ -101,7 +107,8 @@ export default function TravelPage() {
               onSelect={select}
               onEdit={editRegion}
             />
-          ) : (
+          )}
+          {view === "tree" && (
             <section className="travel-tree-panel" aria-label="地区与足迹">
               <RegionTree
                 snapshot={snapshot}

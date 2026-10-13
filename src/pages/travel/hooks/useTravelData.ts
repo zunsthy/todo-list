@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { openTravelDatabase } from "../db.ts";
 import type { TravelDatabase } from "../db.ts";
-import { emptySnapshot } from "../model.ts";
+import { emptySnapshot, retainSnapshot } from "../model.ts";
 
 export const useTravelData = () => {
   const database = useRef<TravelDatabase | null>(null);
+  const snapshotDatabase = useRef<TravelDatabase | null>(null);
   const loadSequence = useRef(0);
+  const invalidateMap = useRef(false);
   const writeBlocked = useRef(false);
   const setWriteBlocked = useCallback((value: boolean) => {
     writeBlocked.current = value;
   }, []);
   const [snapshot, setSnapshot] = useState(emptySnapshot);
   const [ready, setReady] = useState(false);
+  const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -22,14 +25,25 @@ export const useTravelData = () => {
     setError("");
     setMessage("");
   }, []);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (changed = false) => {
+    invalidateMap.current ||= changed;
     const current = database.current;
     if (!current) return;
     const sequence = ++loadSequence.current;
     const next = await current.snapshot();
     if (sequence !== loadSequence.current || current !== database.current)
       return;
-    setSnapshot(next);
+    const sameDatabase = snapshotDatabase.current === current;
+    snapshotDatabase.current = current;
+    // A reopened connection must still reach consumers after a bfcache restore.
+    setSnapshot((previous) =>
+      sameDatabase ? retainSnapshot(previous, next) : next,
+    );
+    // Preserve a write invalidation even if a later focus read overtook it.
+    if (invalidateMap.current) {
+      invalidateMap.current = false;
+      setRevision((value) => value + 1);
+    }
     setReady(true);
   }, []);
 
@@ -50,7 +64,7 @@ export const useTravelData = () => {
         }
         database.current = handle;
         unsubscribe = handle.subscribe(() => {
-          void refresh().catch(report);
+          void refresh(true).catch(report);
         });
         await refresh();
       } catch (cause) {
@@ -96,7 +110,7 @@ export const useTravelData = () => {
     clearFeedback();
     try {
       await operation(handle);
-      await refresh();
+      await refresh(write);
       setMessage(success);
     } finally {
       setBusy(false);
@@ -106,6 +120,7 @@ export const useTravelData = () => {
     database: database.current,
     snapshot,
     ready,
+    revision,
     busy,
     error,
     message,

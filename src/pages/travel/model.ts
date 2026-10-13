@@ -249,6 +249,23 @@ export const same = (a: unknown, b: unknown): boolean => {
     leftKeys.every((key) => same(left[key], right[key]))
   );
 };
+// IndexedDB returns fresh objects even when a focus refresh found no changes.
+// Retain unchanged branches so read-only refreshes do not rebuild the map.
+export const retainSnapshot = (
+  previous: TravelSnapshot,
+  next: TravelSnapshot,
+): TravelSnapshot => {
+  const regions = same(previous.regions, next.regions)
+    ? previous.regions
+    : next.regions;
+  const footprints = same(previous.footprints, next.footprints)
+    ? previous.footprints
+    : next.footprints;
+  return regions === previous.regions && footprints === previous.footprints
+    ? previous
+    : { regions, footprints };
+};
+
 const unique = <T>(
   items: T[],
   getId: (item: T) => string,

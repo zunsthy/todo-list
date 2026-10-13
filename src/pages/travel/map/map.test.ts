@@ -3,6 +3,7 @@ import test from "node:test";
 import { chinaRegion } from "../model.ts";
 import type { Footprint, Region, RegionBoundary } from "../types.ts";
 import { lab } from "d3";
+import { hexbin } from "d3-hexbin";
 import { mapGeometry, toWgs84, wgs84ToGcj02 } from "./coordinates.ts";
 import {
   metersPerMapUnit,
@@ -260,6 +261,26 @@ test("hex grid origins stay aligned to map coordinates across pan and row wraps"
     const worldRowShift =
       (oneRow[1] - (y + radius * 1.5) - (offset[1] - y)) / (radius * 1.5);
     assert(Math.abs(worldRowShift / 2 - Math.round(worldRowShift / 2)) < 1e-9);
+  }
+});
+
+test("hexbin centers and point ownership use the existing staggered lattice", () => {
+  const radius = 6.5;
+  const grid = hexbin<{ x: number; y: number }>()
+    .extent([
+      [0, 0],
+      [300, 200],
+    ])
+    .radius(radius)
+    .x((point) => point.x)
+    .y((point) => point.y);
+  for (const [x, y] of grid.centers()) {
+    const cell = grid([{ x, y }])[0]!;
+    assert(Math.abs(cell.x - x) < 1e-9);
+    assert(Math.abs(cell.y - y) < 1e-9);
+    const row = Math.round(y / (radius * 1.5));
+    const column = x / (radius * Math.sqrt(3)) - (row & 1) / 2;
+    assert(Math.abs(column - Math.round(column)) < 1e-9);
   }
 });
 

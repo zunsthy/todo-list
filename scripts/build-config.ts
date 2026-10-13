@@ -56,7 +56,7 @@ export const renderPage = async (
         page.id === "travel"
           ? {
               d3: "https://esm.sh/d3@7.9.0?target=es2022",
-              hexgrid: "https://esm.sh/d3-hexgrid@0.3.0?target=es2022",
+              hexbin: "https://esm.sh/d3-hexbin@0.2.2?target=es2022",
             }
           : false,
     },

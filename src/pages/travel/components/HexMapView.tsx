@@ -8,6 +8,8 @@ import type { HexMap, MapHover, MapStatus } from "../map/engine.ts";
 const MapLegend = lazy(() => import("./MapLegend.js"));
 
 export const HexMapView = (props: {
+  active: boolean;
+  revision: number;
   database: TravelDatabase;
   regions: Region[];
   footprints: Footprint[];
@@ -17,7 +19,8 @@ export const HexMapView = (props: {
   onSelect(id: string): void;
   onEdit(region: Region): void;
 }) => {
-  const { database, regions, footprints, selectedId, query, readOnly } = props;
+  const { active, database, regions, footprints, selectedId, query, readOnly } =
+    props;
   const latest = useRef(props);
   latest.current = props;
   const canvas = useRef<HTMLCanvasElement>(null),
@@ -110,11 +113,12 @@ export const HexMapView = (props: {
     const element = canvas.current!,
       container = stage.current!;
     const observer = new ResizeObserver(() => {
-      engine.current?.resize(container.clientWidth, container.clientHeight);
+      if (latest.current.active)
+        engine.current?.resize(container.clientWidth, container.clientHeight);
     });
     observer.observe(container);
     setStatus((s) => ({ ...s, loading: true, error: "" }));
-    // Keep D3, the hexgrid plugin and all geometry out of the tree-only path.
+    // Keep D3, hexbin and all geometry out of the initial tree-only path.
     void import("../map/engine.js")
       .then(({ createHexMap }) => {
         if (disposed) return;
@@ -132,12 +136,15 @@ export const HexMapView = (props: {
           },
         });
         engine.current = map;
-        map.update(
-          latest.current.regions,
-          latest.current.selectedId,
-          latest.current.footprints,
-        );
-        map.resize(container.clientWidth, container.clientHeight);
+        map.setActive(latest.current.active);
+        if (latest.current.active) {
+          map.update(
+            latest.current.regions,
+            latest.current.selectedId,
+            latest.current.footprints,
+          );
+          map.resize(container.clientWidth, container.clientHeight);
+        }
       })
       .catch((error) => {
         if (!disposed)
@@ -156,11 +163,26 @@ export const HexMapView = (props: {
   }, [database, hasBoundaries, attempt]);
 
   useEffect(() => {
-    engine.current?.update(regions, selectedId, footprints);
-  }, [regions, selectedId, footprints]);
+    engine.current?.invalidate();
+  }, [props.revision]);
+
+  useEffect(() => {
+    const map = engine.current;
+    if (!map) return;
+    if (active) {
+      // Apply edits/filters and the visible size before resuming queued work.
+      map.update(regions, selectedId, footprints);
+      map.resize(stage.current!.clientWidth, stage.current!.clientHeight);
+    }
+    map.setActive(active);
+  }, [active, regions, selectedId, footprints]);
 
   return (
-    <section className="travel-map-panel" aria-label="六边形足迹地图">
+    <section
+      className="travel-map-panel"
+      aria-label="六边形足迹地图"
+      hidden={!active}
+    >
       <div className="travel-map-toolbar">
         <div className="travel-actions">
           <button

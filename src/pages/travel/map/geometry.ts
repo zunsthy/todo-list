@@ -2,7 +2,7 @@ import { geoMercator, geoPath, geoStream, type GeoStream } from "d3";
 import type { MultiPolygon } from "geojson";
 import type { Pos, RegionBoundary } from "../types.ts";
 import { mapGeometry, toWgs84 } from "./coordinates.ts";
-import { simplifyRing, type Point, type RegionMetrics } from "./layout.ts";
+import type { Point, RegionMetrics } from "./layout.ts";
 
 const projection = geoMercator()
   .scale(2048 / (2 * Math.PI))
@@ -34,7 +34,6 @@ export const metersPerMapUnit = (point: Point): number | null => {
 
 export interface PreparedBoundary extends RegionMetrics {
   geometry: MultiPolygon;
-  levels: Map<number, MultiPolygon>;
 }
 
 export const prepareBoundary = (boundary: RegionBoundary): PreparedBoundary => {
@@ -78,26 +77,5 @@ export const prepareBoundary = (boundary: RegionBoundary): PreparedBoundary => {
     geometry,
     bounds,
     area: planarPath.area(geometry),
-    levels: new Map(),
   };
-};
-
-export const displayGeometry = (
-  boundary: PreparedBoundary,
-  scale: number,
-): MultiPolygon => {
-  const level = Math.ceil(Math.log2(scale));
-  let geometry = boundary.levels.get(level);
-  if (!geometry) {
-    geometry = {
-      type: "MultiPolygon",
-      coordinates: boundary.geometry.coordinates.map((polygon) =>
-        polygon.map((ring) => simplifyRing(ring as Point[], 0.35 / 2 ** level)),
-      ),
-    };
-    boundary.levels.set(level, geometry);
-    if (boundary.levels.size > 3)
-      boundary.levels.delete(boundary.levels.keys().next().value!);
-  }
-  return geometry;
 };

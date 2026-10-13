@@ -34,6 +34,9 @@
   .travel-map-panel > :not(.travel-map-stage) {
     flex: none;
   }
+  .travel-map-panel[hidden] {
+    display: none;
+  }
   .travel-map-toolbar {
     display: flex;
     flex-wrap: wrap;
