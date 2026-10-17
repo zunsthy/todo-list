@@ -1,7 +1,7 @@
 import { metersPerMapUnit } from "./geometry.ts";
 import { hexRadius, type Camera, type Size } from "./layout.ts";
 
-const MIN_HEX_METERS = 1000;
+const MIN_HEX_METERS = 5000;
 
 // Use the grid's horizontal cell spacing, not the scale bar's label. Both
 // distance calculations refer to the latitude at the viewport center.

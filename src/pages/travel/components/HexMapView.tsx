@@ -189,7 +189,7 @@ export const HexMapView = (props: {
             type="button"
             aria-label="放大地图"
             title={
-              status.canZoomIn ? "放大地图" : "已达到单格约 1 km 的放大上限"
+              status.canZoomIn ? "放大地图" : "已达到单格约 5 km 的放大上限"
             }
             disabled={!hasBoundaries || !status.canZoomIn}
             onClick={() => engine.current?.zoom(1.7)}

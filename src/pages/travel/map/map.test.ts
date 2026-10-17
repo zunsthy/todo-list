@@ -94,7 +94,7 @@ test("map scale fits narrow viewports and hides for unusable views", () => {
   assert.equal(mapScaleBar(camera, { width: 1, height: 1 }), null);
 });
 
-test("zoom stops at 1 km cell spacing for different latitudes and canvas sizes", () => {
+test("zoom stops at 5 km cell spacing for different latitudes and canvas sizes", () => {
   for (const size of [
     { width: 800, height: 600 },
     { width: 3840, height: 2160 },
@@ -113,7 +113,7 @@ test("zoom stops at 1 km cell spacing for different latitudes and canvas sizes",
       const meters =
         (hexRadius(size) * Math.sqrt(3) * metersPerMapUnit(center)!) /
         limited.k;
-      assert(Math.abs(meters - 1000) < 1e-6);
+      assert(Math.abs(meters - 5000) < 1e-6);
       assert(limited.k < camera.k);
       assert(
         Math.abs((size.width / 2 - limited.x) / limited.k - center[0]) < 1e-9,
